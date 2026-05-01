@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Honda CB350 保養助理</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="topbar" aria-label="車輛設定">
+        <div>
+          <p class="eyebrow">Honda CB350</p>
+          <h1>保養助理</h1>
+        </div>
+        <form class="bike-form" id="bikeForm">
+          <label>
+            <span>目前里程</span>
+            <input id="currentMileage" name="currentMileage" type="number" min="0" step="1" placeholder="例如 12800" />
+          </label>
+          <label>
+            <span>檢查日期</span>
+            <input id="currentDate" name="currentDate" type="date" />
+          </label>
+          <button type="submit">更新</button>
+        </form>
+      </section>
+
+      <section class="dashboard" aria-label="保養提醒">
+        <article class="summary-card danger">
+          <span>已到期</span>
+          <strong id="dueCount">0</strong>
+        </article>
+        <article class="summary-card warning">
+          <span>快到期</span>
+          <strong id="soonCount">0</strong>
+        </article>
+        <article class="summary-card">
+          <span>下次小保養</span>
+          <strong id="minorService">-</strong>
+        </article>
+        <article class="summary-card">
+          <span>下次大保養</span>
+          <strong id="majorService">-</strong>
+        </article>
+      </section>
+
+      <section class="workspace">
+        <aside class="chat-panel" aria-label="AI 互動機器人">
+          <div class="panel-title">
+            <div>
+              <p class="eyebrow">AI Bot</p>
+              <h2>貼上今天做了什麼</h2>
+            </div>
+            <button class="ghost-button" id="sampleButton" type="button">範例</button>
+          </div>
+          <div class="chat-log" id="chatLog" aria-live="polite"></div>
+          <form class="chat-input" id="chatForm">
+            <textarea id="chatText" rows="6" placeholder="例如：今天 2026/5/1 里程 12850，換機油 10W-30、清潔潤滑鏈條，費用 950。"></textarea>
+            <button type="submit">分析並加入</button>
+          </form>
+          <div class="quick-actions">
+            <button type="button" data-quick="機油">機油</button>
+            <button type="button" data-quick="鏈條">鏈條</button>
+            <button type="button" data-quick="煞車油">煞車油</button>
+            <button type="button" data-quick="火星塞">火星塞</button>
+          </div>
+        </aside>
+
+        <section class="records-panel" aria-label="保養資料">
+          <div class="tabs" role="tablist">
+            <button class="tab active" data-tab="reminders" type="button">提醒</button>
+            <button class="tab" data-tab="records" type="button">紀錄</button>
+            <button class="tab" data-tab="schedule" type="button">週期</button>
+          </div>
+
+          <div class="tab-view active" id="reminders">
+            <div class="section-heading">
+              <h2>下次要處理</h2>
+              <button class="ghost-button" id="exportButton" type="button">匯出 JSON</button>
+            </div>
+            <div class="reminder-list" id="reminderList"></div>
+          </div>
+
+          <div class="tab-view" id="records">
+            <div class="section-heading">
+              <h2>保養紀錄</h2>
+              <button class="ghost-button danger-text" id="clearButton" type="button">清空</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>日期</th>
+                    <th>里程</th>
+                    <th>項目</th>
+                    <th>動作</th>
+                    <th>費用</th>
+                    <th>備註</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="recordRows"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="tab-view" id="schedule">
+            <div class="section-heading">
+              <h2>CB350 週期表</h2>
+            </div>
+            <div class="schedule-grid" id="scheduleGrid"></div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <template id="botIntro">
+      <div class="message bot">
+        <strong>保養助理</strong>
+        <p>把今天保養內容貼給我，我會自動抓項目、動作、里程、費用，加入紀錄後重新計算下次提醒。</p>
+      </div>
+    </template>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
