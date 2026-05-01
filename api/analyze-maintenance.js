@@ -37,15 +37,21 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: "Server is missing OPENAI_API_KEY" });
+  const openAiKey = process.env.OPENAI_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!geminiKey && !openAiKey) {
+    return res.status(500).json({ error: "Server is missing GEMINI_API_KEY or OPENAI_API_KEY" });
   }
 
   try {
     const { text = "", imageDataUrl = "", currentMileage = "", currentDate = "", maintenanceItems = [] } = req.body || {};
     if (!text && !imageDataUrl) {
       return res.status(400).json({ error: "Missing text or image" });
+    }
+
+    if (geminiKey) {
+      const outputText = await analyzeWithGemini({ geminiKey, text, imageDataUrl, currentMileage, currentDate, maintenanceItems });
+      return res.status(200).json(parseJsonOutput(outputText, "Gemini"));
     }
 
     const content = [
@@ -72,7 +78,7 @@ export default async function handler(req, res) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${openAiKey}`,
       },
       body: JSON.stringify({
         model: process.env.OPENAI_MODEL || "gpt-5",
@@ -95,11 +101,64 @@ export default async function handler(req, res) {
     }
 
     const outputText = data.output_text || extractOutputText(data);
-    const parsed = parseJsonOutput(outputText);
+    const parsed = parseJsonOutput(outputText, "OpenAI");
     return res.status(200).json(parsed);
   } catch (error) {
     return res.status(500).json({ error: error.message || "Analyze failed" });
   }
+}
+
+async function analyzeWithGemini({ geminiKey, text, imageDataUrl, currentMileage, currentDate, maintenanceItems }) {
+  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const parts = [
+    {
+      text: `${SYSTEM_PROMPT}\n\n使用者資料：${JSON.stringify({
+        userText: text,
+        currentMileage,
+        currentDate,
+        maintenanceItems,
+      })}`,
+    },
+  ];
+
+  if (imageDataUrl) {
+    const image = parseDataUrl(imageDataUrl);
+    parts.push({
+      inline_data: {
+        mime_type: image.mimeType,
+        data: image.base64,
+      },
+    });
+  }
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts }],
+      generationConfig: {
+        response_mime_type: "application/json",
+      },
+    }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    return Promise.reject(new Error(data.error?.message || "Gemini request failed"));
+  }
+
+  return (data.candidates?.[0]?.content?.parts || [])
+    .map((part) => part.text || "")
+    .join("\n");
+}
+
+function parseDataUrl(dataUrl) {
+  const match = String(dataUrl).match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) throw new Error("Invalid image data URL");
+  return {
+    mimeType: match[1],
+    base64: match[2],
+  };
 }
 
 function extractOutputText(data) {
@@ -110,9 +169,9 @@ function extractOutputText(data) {
     .join("\n");
 }
 
-function parseJsonOutput(text) {
+function parseJsonOutput(text, provider = "AI") {
   const trimmed = String(text || "").trim();
-  if (!trimmed) throw new Error("OpenAI returned empty output");
+  if (!trimmed) throw new Error(`${provider} returned empty output`);
 
   try {
     return JSON.parse(trimmed);
@@ -125,6 +184,6 @@ function parseJsonOutput(text) {
     if (first >= 0 && last > first) {
       return JSON.parse(trimmed.slice(first, last + 1));
     }
-    throw new Error("OpenAI output was not valid JSON");
+    throw new Error(`${provider} output was not valid JSON`);
   }
 }
