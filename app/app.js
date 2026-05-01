@@ -151,6 +151,10 @@ const els = {
   chatText: document.querySelector("#chatText"),
   photoInput: document.querySelector("#photoInput"),
   aiEndpoint: document.querySelector("#aiEndpoint"),
+  syncKey: document.querySelector("#syncKey"),
+  syncStatus: document.querySelector("#syncStatus"),
+  downloadCloudButton: document.querySelector("#downloadCloudButton"),
+  uploadCloudButton: document.querySelector("#uploadCloudButton"),
   chatLog: document.querySelector("#chatLog"),
   recordRows: document.querySelector("#recordRows"),
   reminderList: document.querySelector("#reminderList"),
@@ -175,6 +179,11 @@ function init() {
     state.settings.aiEndpoint = defaultAiEndpoint();
   }
   els.aiEndpoint.value = state.settings.aiEndpoint || "";
+  if (!state.settings.syncEndpoint) {
+    state.settings.syncEndpoint = defaultSyncEndpoint();
+  }
+  els.syncKey.value = state.settings.syncKey || "";
+  updateSyncStatus();
   document.querySelectorAll(".tab").forEach((button) => {
     button.addEventListener("click", () => switchTab(button.dataset.tab));
   });
@@ -188,6 +197,9 @@ function init() {
   els.bikeForm.addEventListener("submit", updateSettings);
   els.chatForm.addEventListener("submit", handleChatSubmit);
   els.aiEndpoint.addEventListener("change", updateAiEndpoint);
+  els.syncKey.addEventListener("change", updateSyncKey);
+  els.downloadCloudButton.addEventListener("click", downloadCloudData);
+  els.uploadCloudButton.addEventListener("click", () => uploadCloudData({ silent: false }));
   els.sampleButton.addEventListener("click", fillSample);
   els.clearButton.addEventListener("click", clearRecords);
   els.exportButton.addEventListener("click", exportData);
@@ -202,6 +214,9 @@ function loadState() {
       currentMileage: "",
       currentDate: toDateInput(new Date()),
       aiEndpoint: "",
+      syncEndpoint: "",
+      syncKey: "",
+      lastCloudSyncAt: "",
       showAllReminders: false,
     },
     records: [],
@@ -217,11 +232,16 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function saveStateAndSync() {
+  saveState();
+  uploadCloudData({ silent: true });
+}
+
 function updateSettings(event) {
   event.preventDefault();
   state.settings.currentMileage = Number(els.currentMileage.value) || "";
   state.settings.currentDate = els.currentDate.value || toDateInput(new Date());
-  saveState();
+  saveStateAndSync();
   render();
   addMessage("bot", "已更新目前里程與檢查日期，提醒表也重新計算了。");
 }
@@ -230,6 +250,105 @@ function updateAiEndpoint() {
   state.settings.aiEndpoint = els.aiEndpoint.value.trim();
   saveState();
   addMessage("bot", state.settings.aiEndpoint ? "AI 端點已儲存。之後文字與照片會優先交給 AI 分析。" : "AI 端點已清空，會改回本機分類模式。");
+}
+
+function updateSyncKey() {
+  state.settings.syncKey = els.syncKey.value.trim();
+  saveState();
+  updateSyncStatus();
+}
+
+function defaultSyncEndpoint() {
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1" || host.endsWith("github.io")) return "https://cb350-maintenance-app.vercel.app/api/sync";
+  return `${window.location.origin}/api/sync`;
+}
+
+function cloudPayload() {
+  return {
+    settings: {
+      currentMileage: state.settings.currentMileage,
+      currentDate: state.settings.currentDate,
+      aiEndpoint: state.settings.aiEndpoint,
+      showAllReminders: state.settings.showAllReminders,
+    },
+    records: state.records,
+  };
+}
+
+async function uploadCloudData({ silent = false } = {}) {
+  if (!state.settings.syncKey || !state.settings.syncEndpoint) {
+    if (!silent) setSyncStatus("請先輸入同步代碼。", "warn");
+    return;
+  }
+  try {
+    setSyncStatus("正在上傳雲端...", "busy");
+    const response = await fetch(state.settings.syncEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: state.settings.syncKey, data: cloudPayload() }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    state.settings.lastCloudSyncAt = result.data?.cloudUpdatedAt || new Date().toISOString();
+    saveState();
+    setSyncStatus(`已上傳雲端：${formatDateTime(state.settings.lastCloudSyncAt)}`, "ok");
+  } catch (error) {
+    setSyncStatus(`雲端上傳失敗：${error.message}`, "warn");
+    if (!silent) addMessage("bot alert", `雲端上傳失敗：${error.message}`);
+  }
+}
+
+async function downloadCloudData() {
+  state.settings.syncKey = els.syncKey.value.trim();
+  saveState();
+  if (!state.settings.syncKey || !state.settings.syncEndpoint) {
+    setSyncStatus("請先輸入同步代碼。", "warn");
+    return;
+  }
+  try {
+    setSyncStatus("正在下載雲端...", "busy");
+    const url = `${state.settings.syncEndpoint}?key=${encodeURIComponent(state.settings.syncKey)}`;
+    const response = await fetch(url);
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    if (!result.data) {
+      setSyncStatus("雲端目前沒有資料。你可以先按上傳雲端。", "warn");
+      return;
+    }
+    state.settings = {
+      ...state.settings,
+      ...result.data.settings,
+      syncKey: state.settings.syncKey,
+      syncEndpoint: state.settings.syncEndpoint,
+      lastCloudSyncAt: result.data.cloudUpdatedAt || new Date().toISOString(),
+    };
+    state.records = Array.isArray(result.data.records) ? result.data.records : [];
+    saveState();
+    els.currentMileage.value = state.settings.currentMileage || "";
+    els.currentDate.value = state.settings.currentDate || toDateInput(new Date());
+    els.aiEndpoint.value = state.settings.aiEndpoint || "";
+    render();
+    setSyncStatus(`已下載雲端：${formatDateTime(state.settings.lastCloudSyncAt)}`, "ok");
+    addMessage("bot", "已從雲端下載保養資料，手機和電腦現在會使用同一份紀錄。");
+  } catch (error) {
+    setSyncStatus(`雲端下載失敗：${error.message}`, "warn");
+    addMessage("bot alert", `雲端下載失敗：${error.message}`);
+  }
+}
+
+function updateSyncStatus() {
+  if (!state.settings.syncKey) {
+    setSyncStatus("電腦和手機輸入同一組同步代碼，就會使用同一份保養資料。", "");
+    return;
+  }
+  const last = state.settings.lastCloudSyncAt ? `上次同步：${formatDateTime(state.settings.lastCloudSyncAt)}` : "尚未同步";
+  setSyncStatus(`同步代碼已設定。${last}`, "ok");
+}
+
+function setSyncStatus(text, status) {
+  els.syncStatus.textContent = text;
+  els.syncStatus.dataset.status = status;
 }
 
 function defaultAiEndpoint() {
@@ -273,7 +392,7 @@ async function handleChatSubmit(event) {
   state.settings.currentDate = parsed.date || state.settings.currentDate;
   els.currentMileage.value = state.settings.currentMileage || "";
   els.currentDate.value = state.settings.currentDate || toDateInput(new Date());
-  saveState();
+  saveStateAndSync();
   render();
 
   const names = parsed.records.map((record) => `${record.item}（${record.action}）`).join("、");
@@ -472,7 +591,7 @@ function renderRecords() {
   document.querySelectorAll("[data-delete]").forEach((button) => {
     button.addEventListener("click", () => {
       state.records = state.records.filter((record) => record.id !== button.dataset.delete);
-      saveState();
+      saveStateAndSync();
       render();
     });
   });
@@ -529,7 +648,7 @@ function renderReminders() {
 
 function toggleReminderExpansion() {
   state.settings.showAllReminders = !state.settings.showAllReminders;
-  saveState();
+  saveStateAndSync();
   renderReminders();
 }
 
@@ -560,7 +679,7 @@ function completeReminder(key) {
     note,
     createdAt: new Date().toISOString(),
   });
-  saveState();
+  saveStateAndSync();
   render();
   addMessage("bot", `已把「${item.name}」記錄完成，提醒已更新到下一次週期。`);
 }
@@ -646,7 +765,7 @@ function quickText(item) {
 function clearRecords() {
   if (!confirm("確定要清空所有保養紀錄嗎？")) return;
   state.records = [];
-  saveState();
+  saveStateAndSync();
   render();
   addMessage("bot alert", "保養紀錄已清空。目前里程設定仍保留。");
 }
@@ -683,6 +802,17 @@ function formatKm(value) {
 
 function number(value) {
   return Number(value).toLocaleString("zh-TW");
+}
+
+function formatDateTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("zh-TW", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function escapeHtml(value) {

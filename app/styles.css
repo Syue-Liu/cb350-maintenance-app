@@ -329,19 +329,22 @@ textarea:focus {
   background: rgba(255, 255, 255, 0.05);
 }
 
-.ai-settings {
+.ai-settings,
+.cloud-settings {
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.04);
 }
 
-.ai-settings summary {
+.ai-settings summary,
+.cloud-settings summary {
   padding: 12px;
   color: var(--cream);
   cursor: pointer;
   font-weight: 900;
 }
 
-.ai-settings label {
+.ai-settings label,
+.cloud-settings label {
   padding: 0 12px 12px;
 }
 
@@ -350,6 +353,37 @@ textarea:focus {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.55;
+}
+
+.settings-note[data-status="ok"] {
+  color: #9be4aa;
+}
+
+.settings-note[data-status="warn"] {
+  color: #ffd08a;
+}
+
+.settings-note[data-status="busy"] {
+  color: #9fd5ff;
+}
+
+.sync-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.sync-actions button {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.sync-actions button:hover {
+  background: var(--soft);
 }
 
 .quick-actions {

@@ -9,7 +9,7 @@
 - 抓取日期、里程、費用、保養項目
 - 依 CB350 保養週期提醒下次更換/檢查
 - 顯示下次小保養與每 20,000 km 大保養里程
-- 資料儲存在手機或電腦瀏覽器本機
+- 可用同步代碼把手機和電腦資料同步到雲端
 
 維修單照片範例可辨識：
 
@@ -64,3 +64,27 @@ OPENAI_MODEL=gpt-5
 ```text
 https://你的-vercel-專案.vercel.app/api/analyze-maintenance
 ```
+
+## 雲端同步
+
+App 已包含 Vercel KV/Upstash Redis 同步 API：
+
+```text
+api/sync.js
+```
+
+在 Vercel 專案新增 KV/Redis 儲存服務後，確認環境變數存在：
+
+```text
+KV_REST_API_URL
+KV_REST_API_TOKEN
+```
+
+或：
+
+```text
+UPSTASH_REDIS_REST_URL
+UPSTASH_REDIS_REST_TOKEN
+```
+
+重新部署後，在 App 的「雲端同步」輸入同一組同步代碼，例如 `syue-cb350-rs`，電腦按「上傳雲端」，手機按「下載雲端」即可同步。
