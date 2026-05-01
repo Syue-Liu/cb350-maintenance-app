@@ -1,20 +1,21 @@
 :root {
-  color-scheme: light;
-  --ink: #172126;
-  --muted: #62717a;
-  --line: #d9e3e8;
-  --panel: #ffffff;
-  --soft: #f5f8fa;
-  --brand: #1f5f6f;
-  --brand-dark: #153d49;
-  --teal: #2d8a7c;
-  --amber: #b56a12;
-  --amber-bg: #fff4df;
-  --red: #b42318;
-  --red-bg: #fff0ee;
-  --green: #237a4b;
-  --green-bg: #eaf8ef;
-  --shadow: 0 16px 42px rgba(31, 61, 73, 0.12);
+  color-scheme: dark;
+  --ink: #f7f1ea;
+  --muted: #b7aca1;
+  --line: rgba(255, 255, 255, 0.14);
+  --panel: rgba(25, 26, 28, 0.92);
+  --panel-solid: #18191c;
+  --soft: rgba(255, 255, 255, 0.07);
+  --cream: #f3e7d8;
+  --red: #c8292f;
+  --red-bright: #f0484f;
+  --amber: #d49b54;
+  --amber-bg: rgba(212, 155, 84, 0.15);
+  --blue: #4ea3bd;
+  --green: #67b779;
+  --green-bg: rgba(103, 183, 121, 0.15);
+  --danger-bg: rgba(200, 41, 47, 0.16);
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.36);
 }
 
 * {
@@ -24,9 +25,11 @@
 body {
   margin: 0;
   min-width: 320px;
-  background: #edf3f6;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(200, 41, 47, 0.28), transparent 34%),
+    linear-gradient(135deg, #08090b 0%, #17191d 48%, #0b1118 100%);
   color: var(--ink);
-  font-family: Arial, "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  font-family: Inter, Arial, "Noto Sans TC", "Microsoft JhengHei", sans-serif;
 }
 
 button,
@@ -46,24 +49,54 @@ button {
   padding: 24px;
 }
 
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 22px 24px;
-  background: var(--brand-dark);
-  color: #fff;
+.hero {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #111;
   box-shadow: var(--shadow);
+}
+
+.hero-media {
+  position: absolute;
+  inset: 0;
+  background-image: url("./assets/cb350-rs-red.jpg");
+  background-size: cover;
+  background-position: center 48%;
+  transform: scale(1.01);
+}
+
+.hero-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(8, 9, 11, 0.9) 0%, rgba(8, 9, 11, 0.66) 36%, rgba(8, 9, 11, 0.2) 72%),
+    linear-gradient(0deg, rgba(8, 9, 11, 0.78) 0%, transparent 48%);
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(280px, 520px) minmax(300px, 440px);
+  gap: 28px;
+  align-items: end;
+  min-height: 420px;
+  padding: 34px;
+}
+
+.hero-copy {
+  display: grid;
+  gap: 14px;
 }
 
 .eyebrow {
   margin: 0 0 4px;
   color: inherit;
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0;
-  opacity: 0.72;
+  font-weight: 900;
+  opacity: 0.78;
   text-transform: uppercase;
 }
 
@@ -74,8 +107,10 @@ p {
 }
 
 h1 {
-  font-size: 28px;
+  max-width: 520px;
+  font-size: clamp(40px, 7vw, 82px);
   line-height: 1.15;
+  letter-spacing: 0;
 }
 
 h2 {
@@ -83,17 +118,28 @@ h2 {
   line-height: 1.25;
 }
 
+.hero-subtitle {
+  max-width: 520px;
+  color: var(--cream);
+  font-size: 17px;
+  line-height: 1.65;
+}
+
 .bike-form {
   display: grid;
-  grid-template-columns: minmax(132px, 180px) minmax(132px, 180px) auto;
-  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
   align-items: end;
+  padding: 18px;
+  background: rgba(15, 16, 18, 0.74);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(14px);
 }
 
 label {
   display: grid;
   gap: 6px;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(255, 255, 255, 0.76);
   font-size: 13px;
   font-weight: 700;
 }
@@ -101,8 +147,8 @@ label {
 input,
 textarea {
   width: 100%;
-  border: 1px solid var(--line);
-  background: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--ink);
   outline: 0;
 }
@@ -121,17 +167,21 @@ textarea {
 
 input:focus,
 textarea:focus {
-  border-color: var(--teal);
-  box-shadow: 0 0 0 3px rgba(45, 138, 124, 0.14);
+  border-color: var(--red-bright);
+  box-shadow: 0 0 0 3px rgba(240, 72, 79, 0.2);
 }
 
 .bike-form button,
 .chat-input button {
   height: 42px;
   padding: 0 18px;
-  background: var(--teal);
+  background: var(--red);
   color: #fff;
   font-weight: 800;
+}
+
+.bike-form button {
+  grid-column: 1 / -1;
 }
 
 .dashboard {
@@ -144,8 +194,9 @@ textarea:focus {
 .summary-card {
   min-height: 94px;
   padding: 18px;
-  background: var(--panel);
-  border-left: 5px solid var(--brand);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--blue);
   box-shadow: var(--shadow);
 }
 
@@ -164,11 +215,11 @@ textarea:focus {
 }
 
 .summary-card.warning {
-  border-color: var(--amber);
+  border-top-color: var(--amber);
 }
 
 .summary-card.danger {
-  border-color: var(--red);
+  border-top-color: var(--red-bright);
 }
 
 .workspace {
@@ -181,6 +232,7 @@ textarea:focus {
 .chat-panel,
 .records-panel {
   background: var(--panel);
+  border: 1px solid var(--line);
   box-shadow: var(--shadow);
 }
 
@@ -204,7 +256,7 @@ textarea:focus {
   min-height: 36px;
   padding: 0 12px;
   border: 1px solid var(--line);
-  background: #fff;
+  background: rgba(255, 255, 255, 0.06);
   color: var(--ink);
   font-weight: 800;
 }
@@ -230,7 +282,7 @@ textarea:focus {
 .message {
   padding: 12px;
   border: 1px solid var(--line);
-  background: var(--soft);
+  background: rgba(255, 255, 255, 0.06);
   line-height: 1.5;
 }
 
@@ -241,13 +293,13 @@ textarea:focus {
 }
 
 .message.user {
-  background: #eef7f5;
-  border-color: #b8ded6;
+  background: rgba(240, 72, 79, 0.12);
+  border-color: rgba(240, 72, 79, 0.34);
 }
 
 .message.bot.alert {
   background: var(--amber-bg);
-  border-color: #f0c274;
+  border-color: rgba(212, 155, 84, 0.45);
 }
 
 .chat-input {
@@ -274,7 +326,7 @@ textarea:focus {
 }
 
 .tab.active {
-  background: var(--brand);
+  background: var(--red);
   color: #fff;
 }
 
@@ -302,22 +354,22 @@ textarea:focus {
   align-items: center;
   padding: 14px;
   border: 1px solid var(--line);
-  background: #fff;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .reminder-item.due {
-  background: var(--red-bg);
-  border-color: #f2b8b2;
+  background: var(--danger-bg);
+  border-color: rgba(240, 72, 79, 0.38);
 }
 
 .reminder-item.soon {
   background: var(--amber-bg);
-  border-color: #f0c274;
+  border-color: rgba(212, 155, 84, 0.45);
 }
 
 .reminder-item.ok {
   background: var(--green-bg);
-  border-color: #b9e2c8;
+  border-color: rgba(103, 183, 121, 0.38);
 }
 
 .item-title {
@@ -336,7 +388,7 @@ textarea:focus {
   align-items: center;
   min-height: 28px;
   padding: 0 10px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.08);
   border: 1px solid var(--line);
   color: var(--ink);
   font-size: 12px;
@@ -345,8 +397,8 @@ textarea:focus {
 }
 
 .pill.due {
-  color: var(--red);
-  border-color: #f2b8b2;
+  color: #ff8c90;
+  border-color: rgba(240, 72, 79, 0.5);
 }
 
 .pill.soon {
@@ -356,7 +408,7 @@ textarea:focus {
 
 .pill.ok {
   color: var(--green);
-  border-color: #b9e2c8;
+  border-color: rgba(103, 183, 121, 0.45);
 }
 
 .table-wrap {
@@ -369,7 +421,7 @@ table {
   width: 100%;
   min-width: 780px;
   border-collapse: collapse;
-  background: #fff;
+  background: transparent;
 }
 
 th,
@@ -382,8 +434,8 @@ td {
 }
 
 th {
-  background: var(--brand-dark);
-  color: #fff;
+  background: #111316;
+  color: var(--cream);
   font-size: 13px;
 }
 
@@ -391,8 +443,8 @@ th {
   width: 32px;
   height: 32px;
   border: 1px solid var(--line);
-  background: #fff;
-  color: var(--red);
+  background: rgba(255, 255, 255, 0.06);
+  color: #ff8c90;
   font-weight: 900;
 }
 
@@ -409,16 +461,16 @@ th {
     padding: 14px;
   }
 
-  .topbar,
+  .hero-content,
   .workspace {
     grid-template-columns: 1fr;
   }
 
-  .topbar {
-    display: grid;
+  .hero,
+  .hero-content {
+    min-height: 560px;
   }
 
-  .bike-form,
   .dashboard {
     grid-template-columns: 1fr 1fr;
   }
@@ -435,11 +487,19 @@ th {
     grid-template-columns: 1fr;
   }
 
+  .hero-content {
+    padding: 22px;
+  }
+
+  .hero-media {
+    background-position: 36% center;
+  }
+
   .tabs {
     overflow-x: auto;
   }
 
   h1 {
-    font-size: 24px;
+    font-size: 38px;
   }
 }

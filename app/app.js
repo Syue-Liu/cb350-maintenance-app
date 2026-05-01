@@ -128,7 +128,7 @@ const MAINTENANCE_ITEMS = [
   },
 ];
 
-const MAJOR_SERVICE_KM = 12000;
+const MAJOR_SERVICE_KM = 20000;
 const MINOR_SERVICE_KM = 6000;
 const STORAGE_KEY = "cb350-maintenance-app-v1";
 

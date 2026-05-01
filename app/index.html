@@ -3,27 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Honda CB350 保養助理</title>
+    <title>Honda CB350 RS 保養助理</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="app-shell">
-      <section class="topbar" aria-label="車輛設定">
-        <div>
-          <p class="eyebrow">Honda CB350</p>
-          <h1>保養助理</h1>
+      <section class="hero" aria-label="車輛設定">
+        <div class="hero-media" aria-hidden="true"></div>
+        <div class="hero-shade"></div>
+        <div class="hero-content">
+          <div class="hero-copy">
+            <p class="eyebrow">Honda CB350 RS · Red</p>
+            <h1>CB350 RS 保養助理</h1>
+            <p class="hero-subtitle">把每次保養變成一條清楚的騎乘履歷，機油、鏈條、煞車油與大保養都替你盯著。</p>
+          </div>
+          <form class="bike-form" id="bikeForm">
+            <label>
+              <span>目前里程</span>
+              <input id="currentMileage" name="currentMileage" type="number" min="0" step="1" placeholder="例如 12800" />
+            </label>
+            <label>
+              <span>檢查日期</span>
+              <input id="currentDate" name="currentDate" type="date" />
+            </label>
+            <button type="submit">更新狀態</button>
+          </form>
         </div>
-        <form class="bike-form" id="bikeForm">
-          <label>
-            <span>目前里程</span>
-            <input id="currentMileage" name="currentMileage" type="number" min="0" step="1" placeholder="例如 12800" />
-          </label>
-          <label>
-            <span>檢查日期</span>
-            <input id="currentDate" name="currentDate" type="date" />
-          </label>
-          <button type="submit">更新</button>
-        </form>
       </section>
 
       <section class="dashboard" aria-label="保養提醒">
@@ -107,7 +112,7 @@
 
           <div class="tab-view" id="schedule">
             <div class="section-heading">
-              <h2>CB350 週期表</h2>
+              <h2>CB350 RS 週期表</h2>
             </div>
             <div class="schedule-grid" id="scheduleGrid"></div>
           </div>
