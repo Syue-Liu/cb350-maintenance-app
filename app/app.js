@@ -140,6 +140,8 @@ const els = {
   bikeForm: document.querySelector("#bikeForm"),
   chatForm: document.querySelector("#chatForm"),
   chatText: document.querySelector("#chatText"),
+  photoInput: document.querySelector("#photoInput"),
+  aiEndpoint: document.querySelector("#aiEndpoint"),
   chatLog: document.querySelector("#chatLog"),
   recordRows: document.querySelector("#recordRows"),
   reminderList: document.querySelector("#reminderList"),
@@ -159,6 +161,10 @@ function init() {
   const today = toDateInput(new Date());
   els.currentMileage.value = state.settings.currentMileage || "";
   els.currentDate.value = state.settings.currentDate || today;
+  if (!state.settings.aiEndpoint) {
+    state.settings.aiEndpoint = defaultAiEndpoint();
+  }
+  els.aiEndpoint.value = state.settings.aiEndpoint || "";
   document.querySelectorAll(".tab").forEach((button) => {
     button.addEventListener("click", () => switchTab(button.dataset.tab));
   });
@@ -171,6 +177,7 @@ function init() {
   });
   els.bikeForm.addEventListener("submit", updateSettings);
   els.chatForm.addEventListener("submit", handleChatSubmit);
+  els.aiEndpoint.addEventListener("change", updateAiEndpoint);
   els.sampleButton.addEventListener("click", fillSample);
   els.clearButton.addEventListener("click", clearRecords);
   els.exportButton.addEventListener("click", exportData);
@@ -183,6 +190,7 @@ function loadState() {
     settings: {
       currentMileage: "",
       currentDate: toDateInput(new Date()),
+      aiEndpoint: "",
     },
     records: [],
   };
@@ -206,12 +214,43 @@ function updateSettings(event) {
   addMessage("bot", "已更新目前里程與檢查日期，提醒表也重新計算了。");
 }
 
-function handleChatSubmit(event) {
+function updateAiEndpoint() {
+  state.settings.aiEndpoint = els.aiEndpoint.value.trim();
+  saveState();
+  addMessage("bot", state.settings.aiEndpoint ? "AI 端點已儲存。之後文字與照片會優先交給 ChatGPT 分析。" : "AI 端點已清空，會改回本機分類模式。");
+}
+
+function defaultAiEndpoint() {
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1" || host.endsWith("github.io")) return "";
+  return `${window.location.origin}/api/analyze-maintenance`;
+}
+
+async function handleChatSubmit(event) {
   event.preventDefault();
   const text = els.chatText.value.trim();
-  if (!text) return;
-  addMessage("user", text);
-  const parsed = parseMaintenanceText(text);
+  const imageFile = els.photoInput.files?.[0] || null;
+  if (!text && !imageFile) return;
+  addMessage("user", imageFile ? `${text || "請分析這張保養照片"}（已附照片：${imageFile.name}）` : text);
+
+  let parsed;
+  if (state.settings.aiEndpoint) {
+    try {
+      setChatBusy(true);
+      parsed = await analyzeWithChatGPT(text, imageFile);
+    } catch (error) {
+      addMessage("bot alert", `ChatGPT 分析失敗：${error.message}。我先改用本機文字分類。`);
+      parsed = parseMaintenanceText(text);
+    } finally {
+      setChatBusy(false);
+    }
+  } else {
+    if (imageFile) {
+      addMessage("bot alert", "照片分析需要先設定 AI API 端點；目前我只能用文字做本機分類。");
+    }
+    parsed = parseMaintenanceText(text);
+  }
+
   if (!parsed.records.length) {
     addMessage("bot alert", "我還沒抓到明確保養項目。可以試著寫「里程 12850 換機油、清潔鏈條、費用 950」。");
     return;
@@ -226,8 +265,79 @@ function handleChatSubmit(event) {
   render();
 
   const names = parsed.records.map((record) => `${record.item}（${record.action}）`).join("、");
-  addMessage("bot", `已分類並加入 ${parsed.records.length} 筆：${names}。我也順手更新了下次提醒。`);
+  const source = parsed.source === "chatgpt" ? "ChatGPT 已分析" : "已分類";
+  addMessage("bot", `${source}並加入 ${parsed.records.length} 筆：${names}。我也順手更新了下次提醒。`);
   els.chatText.value = "";
+  els.photoInput.value = "";
+}
+
+async function analyzeWithChatGPT(text, imageFile) {
+  const imageDataUrl = imageFile ? await fileToDataUrl(imageFile) : "";
+  const response = await fetch(state.settings.aiEndpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      text,
+      imageDataUrl,
+      currentMileage: Number(state.settings.currentMileage) || "",
+      currentDate: state.settings.currentDate || toDateInput(new Date()),
+      maintenanceItems: MAINTENANCE_ITEMS.map(({ key, name, action, kmInterval, monthInterval, note }) => ({
+        key,
+        name,
+        action,
+        kmInterval,
+        monthInterval,
+        note,
+      })),
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || `HTTP ${response.status}`);
+  }
+  return normalizeAiResult(data);
+}
+
+function normalizeAiResult(data) {
+  const date = data.date || state.settings.currentDate || toDateInput(new Date());
+  const mileage = Number(data.mileage) || Number(state.settings.currentMileage) || "";
+  const records = (data.records || [])
+    .map((record) => {
+      const item = findMaintenanceItem(record.key, record.item);
+      if (!item) return null;
+      return {
+        id: crypto.randomUUID(),
+        date: record.date || date,
+        mileage: Number(record.mileage) || mileage,
+        item: item.name,
+        key: item.key,
+        action: record.action || item.action,
+        cost: Number(record.cost) || "",
+        note: record.note || item.note,
+        createdAt: new Date().toISOString(),
+      };
+    })
+    .filter(Boolean);
+  return { date, mileage, records, source: "chatgpt" };
+}
+
+function findMaintenanceItem(key, name) {
+  return MAINTENANCE_ITEMS.find((item) => item.key === key || item.name === name || item.name.includes(name || ""));
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("照片讀取失敗"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function setChatBusy(isBusy) {
+  const button = els.chatForm.querySelector("button[type='submit']");
+  button.disabled = isBusy;
+  button.textContent = isBusy ? "AI 分析中..." : "分析並加入";
 }
 
 function parseMaintenanceText(text) {

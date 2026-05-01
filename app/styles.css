@@ -158,6 +158,11 @@ input {
   padding: 0 12px;
 }
 
+input[type="file"] {
+  height: auto;
+  padding: 10px;
+}
+
 textarea {
   resize: vertical;
   min-height: 140px;
@@ -305,6 +310,35 @@ textarea:focus {
 .chat-input {
   display: grid;
   gap: 10px;
+}
+
+.file-picker {
+  padding: 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ai-settings {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.ai-settings summary {
+  padding: 12px;
+  color: var(--cream);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.ai-settings label {
+  padding: 0 12px 12px;
+}
+
+.settings-note {
+  padding: 0 12px 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .quick-actions {
