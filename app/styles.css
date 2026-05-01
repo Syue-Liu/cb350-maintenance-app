@@ -147,6 +147,7 @@ label {
 input,
 textarea {
   width: 100%;
+  min-width: 0;
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.08);
   color: var(--ink);
@@ -156,6 +157,9 @@ textarea {
 input {
   height: 42px;
   padding: 0 12px;
+  border-radius: 0;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 input[type="file"] {
@@ -604,8 +608,34 @@ th {
     grid-template-columns: 1fr;
   }
 
+  .hero {
+    min-height: 0;
+  }
+
   .hero-content {
+    align-items: end;
+    min-height: 520px;
     padding: 22px;
+  }
+
+  .bike-form {
+    width: 100%;
+    max-width: 100%;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .bike-form label,
+  .bike-form input,
+  .bike-form button {
+    max-width: 100%;
+  }
+
+  input[type="date"] {
+    display: block;
+    min-width: 0;
+    color-scheme: dark;
+    font-size: 16px;
   }
 
   .hero-media {
@@ -618,5 +648,28 @@ th {
 
   h1 {
     font-size: 38px;
+  }
+}
+
+@media (max-width: 380px) {
+  .app-shell {
+    padding: 10px;
+  }
+
+  .hero-content {
+    min-height: 500px;
+    padding: 18px;
+  }
+
+  h1 {
+    font-size: 34px;
+  }
+
+  .hero-subtitle {
+    font-size: 15px;
+  }
+
+  input {
+    padding-inline: 10px;
   }
 }
