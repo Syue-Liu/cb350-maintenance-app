@@ -153,8 +153,6 @@ const els = {
   aiEndpoint: document.querySelector("#aiEndpoint"),
   syncKey: document.querySelector("#syncKey"),
   syncStatus: document.querySelector("#syncStatus"),
-  downloadCloudButton: document.querySelector("#downloadCloudButton"),
-  uploadCloudButton: document.querySelector("#uploadCloudButton"),
   chatLog: document.querySelector("#chatLog"),
   recordRows: document.querySelector("#recordRows"),
   reminderList: document.querySelector("#reminderList"),
@@ -198,14 +196,13 @@ function init() {
   els.chatForm.addEventListener("submit", handleChatSubmit);
   els.aiEndpoint.addEventListener("change", updateAiEndpoint);
   els.syncKey.addEventListener("change", updateSyncKey);
-  els.downloadCloudButton.addEventListener("click", downloadCloudData);
-  els.uploadCloudButton.addEventListener("click", () => uploadCloudData({ silent: false }));
   els.sampleButton.addEventListener("click", fillSample);
   els.clearButton.addEventListener("click", clearRecords);
   els.exportButton.addEventListener("click", exportData);
   els.toggleRemindersButton.addEventListener("click", toggleReminderExpansion);
   els.chatLog.append(document.querySelector("#botIntro").content.cloneNode(true));
   render();
+  downloadCloudData({ silent: true });
 }
 
 function loadState() {
@@ -256,6 +253,7 @@ function updateSyncKey() {
   state.settings.syncKey = els.syncKey.value.trim();
   saveState();
   updateSyncStatus();
+  downloadCloudData({ silent: false, uploadIfEmpty: true });
 }
 
 function defaultSyncEndpoint() {
@@ -282,7 +280,7 @@ async function uploadCloudData({ silent = false } = {}) {
     return;
   }
   try {
-    setSyncStatus("正在上傳雲端...", "busy");
+    setSyncStatus("正在自動備份...", "busy");
     const response = await fetch(state.settings.syncEndpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -292,28 +290,29 @@ async function uploadCloudData({ silent = false } = {}) {
     if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
     state.settings.lastCloudSyncAt = result.data?.cloudUpdatedAt || new Date().toISOString();
     saveState();
-    setSyncStatus(`已上傳雲端：${formatDateTime(state.settings.lastCloudSyncAt)}`, "ok");
+    setSyncStatus(`已自動備份：${formatDateTime(state.settings.lastCloudSyncAt)}`, "ok");
   } catch (error) {
-    setSyncStatus(`雲端上傳失敗：${error.message}`, "warn");
-    if (!silent) addMessage("bot alert", `雲端上傳失敗：${error.message}`);
+    setSyncStatus(`自動備份失敗：${error.message}`, "warn");
+    if (!silent) addMessage("bot alert", `自動備份失敗：${error.message}`);
   }
 }
 
-async function downloadCloudData() {
+async function downloadCloudData({ silent = false, uploadIfEmpty = false } = {}) {
   state.settings.syncKey = els.syncKey.value.trim();
   saveState();
   if (!state.settings.syncKey || !state.settings.syncEndpoint) {
-    setSyncStatus("請先輸入同步代碼。", "warn");
+    setSyncStatus("設定同步代碼後，App 會自動下載與備份雲端資料。", "");
     return;
   }
   try {
-    setSyncStatus("正在下載雲端...", "busy");
+    setSyncStatus("正在同步雲端...", "busy");
     const url = `${state.settings.syncEndpoint}?key=${encodeURIComponent(state.settings.syncKey)}`;
     const response = await fetch(url);
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
     if (!result.data) {
-      setSyncStatus("雲端目前沒有資料。你可以先按上傳雲端。", "warn");
+      setSyncStatus("這組代碼還沒有雲端資料；之後新增或更新會自動備份。", "warn");
+      if (uploadIfEmpty && state.records.length) uploadCloudData({ silent: true });
       return;
     }
     state.settings = {
@@ -329,21 +328,21 @@ async function downloadCloudData() {
     els.currentDate.value = state.settings.currentDate || toDateInput(new Date());
     els.aiEndpoint.value = state.settings.aiEndpoint || "";
     render();
-    setSyncStatus(`已下載雲端：${formatDateTime(state.settings.lastCloudSyncAt)}`, "ok");
-    addMessage("bot", "已從雲端下載保養資料，手機和電腦現在會使用同一份紀錄。");
+    setSyncStatus(`已自動同步：${formatDateTime(state.settings.lastCloudSyncAt)}`, "ok");
+    if (!silent) addMessage("bot", "已從雲端同步保養資料，手機和電腦會使用同一份紀錄。");
   } catch (error) {
-    setSyncStatus(`雲端下載失敗：${error.message}`, "warn");
-    addMessage("bot alert", `雲端下載失敗：${error.message}`);
+    setSyncStatus(`自動同步失敗：${error.message}`, "warn");
+    if (!silent) addMessage("bot alert", `自動同步失敗：${error.message}`);
   }
 }
 
 function updateSyncStatus() {
   if (!state.settings.syncKey) {
-    setSyncStatus("電腦和手機輸入同一組同步代碼，就會使用同一份保養資料。", "");
+    setSyncStatus("設定同步代碼後，手機和電腦會自動共用保養資料。", "");
     return;
   }
-  const last = state.settings.lastCloudSyncAt ? `上次同步：${formatDateTime(state.settings.lastCloudSyncAt)}` : "尚未同步";
-  setSyncStatus(`同步代碼已設定。${last}`, "ok");
+  const last = state.settings.lastCloudSyncAt ? `上次自動同步：${formatDateTime(state.settings.lastCloudSyncAt)}` : "正在等待第一次同步";
+  setSyncStatus(last, "ok");
 }
 
 function setSyncStatus(text, status) {

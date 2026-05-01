@@ -76,17 +76,13 @@
             </label>
             <p class="settings-note">GitHub Pages 不能安全保存 API Key；把端點部署到 Vercel 後貼在這裡，照片與文字就會交給 AI 分析。</p>
           </details>
-          <details class="cloud-settings" open>
-            <summary>雲端同步</summary>
+          <details class="cloud-settings">
+            <summary>自動同步</summary>
             <label>
               <span>同步代碼</span>
               <input id="syncKey" type="text" autocomplete="off" placeholder="例如 syue-cb350-rs" />
             </label>
-            <div class="sync-actions">
-              <button type="button" id="downloadCloudButton">下載雲端</button>
-              <button type="button" id="uploadCloudButton">上傳雲端</button>
-            </div>
-            <p class="settings-note" id="syncStatus">電腦和手機輸入同一組同步代碼，就會使用同一份保養資料。</p>
+            <p class="settings-note" id="syncStatus">輸入同一組同步代碼，手機和電腦會自動共用保養資料。</p>
           </details>
           <div class="quick-actions">
             <button type="button" data-quick="機油">機油</button>

@@ -108,7 +108,7 @@ p {
 
 h1 {
   max-width: 520px;
-  font-size: clamp(40px, 7vw, 82px);
+  font-size: clamp(36px, 6vw, 70px);
   line-height: 1.15;
   letter-spacing: 0;
 }
@@ -165,6 +165,17 @@ input {
 input[type="file"] {
   height: auto;
   padding: 10px;
+}
+
+input[type="date"] {
+  text-align: left;
+  color-scheme: dark;
+}
+
+input[type="date"]::-webkit-date-and-time-value {
+  min-width: 0;
+  margin: 0;
+  text-align: left;
 }
 
 textarea {
@@ -365,25 +376,6 @@ textarea:focus {
 
 .settings-note[data-status="busy"] {
   color: #9fd5ff;
-}
-
-.sync-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 0 12px 12px;
-}
-
-.sync-actions button {
-  min-height: 36px;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--ink);
-  font-weight: 900;
-}
-
-.sync-actions button:hover {
-  background: var(--soft);
 }
 
 .quick-actions {
@@ -668,8 +660,11 @@ th {
   input[type="date"] {
     display: block;
     min-width: 0;
+    max-width: 100%;
     color-scheme: dark;
     font-size: 16px;
+    line-height: 1.2;
+    text-align: left;
   }
 
   .hero-media {
@@ -681,7 +676,7 @@ th {
   }
 
   h1 {
-    font-size: 38px;
+    font-size: 34px;
   }
 }
 
@@ -696,7 +691,7 @@ th {
   }
 
   h1 {
-    font-size: 34px;
+    font-size: 30px;
   }
 
   .hero-subtitle {
