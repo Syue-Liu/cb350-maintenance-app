@@ -204,6 +204,19 @@ textarea:focus {
   grid-column: 1 / -1;
 }
 
+.bike-form input {
+  text-align: center;
+  font-weight: 900;
+  line-height: 42px;
+}
+
+.bike-form input[type="date"]::-webkit-date-and-time-value,
+.bike-form input[type="date"]::-webkit-datetime-edit {
+  width: 100%;
+  margin: 0;
+  text-align: center;
+}
+
 .dashboard {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -663,8 +676,17 @@ th {
     max-width: 100%;
     color-scheme: dark;
     font-size: 16px;
-    line-height: 1.2;
-    text-align: left;
+    line-height: 42px;
+    text-align: center;
+  }
+
+  .bike-form input[type="date"]::-webkit-date-and-time-value,
+  .bike-form input[type="date"]::-webkit-datetime-edit {
+    display: block;
+    width: 100%;
+    min-height: 42px;
+    line-height: 42px;
+    text-align: center;
   }
 
   .hero-media {
