@@ -1,5 +1,14 @@
 const MAINTENANCE_ITEMS = [
   {
+    key: "majorService",
+    name: "大保養",
+    action: "保養",
+    kmInterval: 20000,
+    monthInterval: 0,
+    keywords: ["大保養", "major service", "節流閥", "噴油嘴", "積碳", "燃油清潔", "齒盤"],
+    note: "每 20,000 km；可包含節流閥、噴油嘴、積碳清潔與全車檢查。",
+  },
+  {
     key: "engineOil",
     name: "機油",
     action: "更換",

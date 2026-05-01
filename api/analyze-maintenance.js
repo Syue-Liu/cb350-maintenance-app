@@ -18,6 +18,8 @@ const SYSTEM_PROMPT = `
 規則：
 - 只能使用 maintenanceItems 中存在的保養項目。
 - 照片若看得出油品、火星塞、煞車皮、鏈條、輪胎、里程錶、收據或包裝文字，請納入 note。
+- 台灣民國日期要轉成西元，例如 115/02/04 代表 2026-02-04。
+- 如果同一張維修單含有多個保養品項，請輸出多筆 records。
 - 如果照片或文字不足以確定保養項目，records 回傳空陣列。
 - 機油週期是 4000 km；大保養是 20000 km，但這裡只負責分類本次紀錄。
 `;
@@ -93,7 +95,7 @@ export default async function handler(req, res) {
     }
 
     const outputText = data.output_text || extractOutputText(data);
-    const parsed = JSON.parse(outputText);
+    const parsed = parseJsonOutput(outputText);
     return res.status(200).json(parsed);
   } catch (error) {
     return res.status(500).json({ error: error.message || "Analyze failed" });
@@ -106,4 +108,23 @@ function extractOutputText(data) {
     .filter((content) => content.type === "output_text")
     .map((content) => content.text)
     .join("\n");
+}
+
+function parseJsonOutput(text) {
+  const trimmed = String(text || "").trim();
+  if (!trimmed) throw new Error("OpenAI returned empty output");
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fenced?.[1]) return JSON.parse(fenced[1].trim());
+
+    const first = trimmed.indexOf("{");
+    const last = trimmed.lastIndexOf("}");
+    if (first >= 0 && last > first) {
+      return JSON.parse(trimmed.slice(first, last + 1));
+    }
+    throw new Error("OpenAI output was not valid JSON");
+  }
 }
