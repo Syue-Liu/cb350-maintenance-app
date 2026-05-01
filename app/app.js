@@ -3,10 +3,10 @@ const MAINTENANCE_ITEMS = [
     key: "engineOil",
     name: "機油",
     action: "更換",
-    kmInterval: 6000,
+    kmInterval: 4000,
     monthInterval: 12,
     keywords: ["機油", "換油", "engine oil", "10w-30", "5w-30", "gn4"],
-    note: "每 6,000 km 或每年；首保通常 1,000 km。",
+    note: "每 4,000 km 或每年；首保通常 1,000 km。",
   },
   {
     key: "oilFilter",
