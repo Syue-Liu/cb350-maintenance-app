@@ -58,6 +58,14 @@ async function redisSet(redisUrl, key, value) {
 function redisCommand(redisUrl, args) {
   return new Promise((resolve, reject) => {
     const url = new URL(redisUrl);
+    const username = decodeURIComponent(url.username || "");
+    const password = decodeURIComponent(url.password || "");
+    const commands = [];
+    if (password) {
+      commands.push(username ? ["AUTH", username, password] : ["AUTH", password]);
+    }
+    commands.push(args);
+    const expectedReplies = commands.length;
     const socketFactory = url.protocol === "rediss:" ? tls.connect : net.connect;
     const socket = socketFactory({
       host: url.hostname,
@@ -71,21 +79,24 @@ function redisCommand(redisUrl, args) {
     }, 8000);
 
     socket.on("connect", () => {
-      const commands = [];
-      if (url.password) {
-        commands.push(["AUTH", decodeURIComponent(url.username || "default"), decodeURIComponent(url.password)]);
-      }
-      commands.push(args);
       socket.write(commands.map(encodeRedisCommand).join(""));
     });
 
     socket.on("data", (chunk) => {
       buffer = Buffer.concat([buffer, chunk]);
-      const parsed = parseRedisReply(buffer);
+      let parsed;
+      try {
+        parsed = parseRedisReplies(buffer, expectedReplies);
+      } catch (error) {
+        clearTimeout(timeout);
+        socket.destroy();
+        reject(error);
+        return;
+      }
       if (!parsed.done) return;
       clearTimeout(timeout);
       socket.end();
-      resolve(parsed.value);
+      resolve(parsed.values[parsed.values.length - 1]);
     });
 
     socket.on("error", (error) => {
@@ -102,22 +113,50 @@ function encodeRedisCommand(args) {
   }).join("")}`;
 }
 
-function parseRedisReply(buffer) {
-  const text = buffer.toString("utf8");
-  if (!text) return { done: false };
-  const type = text[0];
-  if (type === "+") return { done: text.includes("\r\n"), value: text.slice(1, text.indexOf("\r\n")) };
-  if (type === "-") throw new Error(text.slice(1, text.indexOf("\r\n")));
-  if (type === ":") return { done: text.includes("\r\n"), value: Number(text.slice(1, text.indexOf("\r\n"))) };
+function parseRedisReplies(buffer, expectedCount) {
+  const values = [];
+  let offset = 0;
+  while (values.length < expectedCount) {
+    const parsed = parseRedisReplyAt(buffer, offset);
+    if (!parsed.done) return { done: false, values };
+    values.push(parsed.value);
+    offset = parsed.nextOffset;
+  }
+  return { done: true, values };
+}
+
+function parseRedisReplyAt(buffer, offset) {
+  if (offset >= buffer.length) return { done: false };
+  const type = String.fromCharCode(buffer[offset]);
+  const lineEnd = buffer.indexOf("\r\n", offset);
+  if (lineEnd < 0) return { done: false };
+
+  if (type === "+") {
+    return {
+      done: true,
+      value: buffer.slice(offset + 1, lineEnd).toString("utf8"),
+      nextOffset: lineEnd + 2,
+    };
+  }
+  if (type === "-") throw new Error(buffer.slice(offset + 1, lineEnd).toString("utf8"));
+  if (type === ":") {
+    return {
+      done: true,
+      value: Number(buffer.slice(offset + 1, lineEnd).toString("utf8")),
+      nextOffset: lineEnd + 2,
+    };
+  }
   if (type === "$") {
-    const lineEnd = text.indexOf("\r\n");
-    if (lineEnd < 0) return { done: false };
-    const length = Number(text.slice(1, lineEnd));
-    if (length === -1) return { done: true, value: null };
+    const length = Number(buffer.slice(offset + 1, lineEnd).toString("utf8"));
     const start = lineEnd + 2;
+    if (length === -1) return { done: true, value: null, nextOffset: start };
     const end = start + length;
     if (buffer.length < end + 2) return { done: false };
-    return { done: true, value: buffer.slice(start, end).toString("utf8") };
+    return {
+      done: true,
+      value: buffer.slice(start, end).toString("utf8"),
+      nextOffset: end + 2,
+    };
   }
   throw new Error("Unsupported Redis response");
 }
