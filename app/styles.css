@@ -255,6 +255,13 @@ textarea:focus {
   gap: 12px;
 }
 
+.heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .ghost-button,
 .quick-actions button,
 .tab {
@@ -380,6 +387,24 @@ textarea:focus {
   margin-top: 16px;
 }
 
+.reminder-collapsed {
+  display: grid;
+  gap: 6px;
+  padding: 18px;
+  border: 1px solid rgba(103, 183, 121, 0.38);
+  background: var(--green-bg);
+}
+
+.reminder-collapsed strong {
+  color: var(--cream);
+  font-size: 18px;
+}
+
+.reminder-collapsed span {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .reminder-item,
 .schedule-item {
   display: grid;
@@ -398,11 +423,12 @@ textarea:focus {
 }
 
 .complete-button {
-  min-height: 34px;
-  padding: 0 12px;
+  min-height: 28px;
+  padding: 0 10px;
   border: 1px solid rgba(240, 72, 79, 0.42);
   background: rgba(200, 41, 47, 0.22);
   color: var(--cream);
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -423,6 +449,36 @@ textarea:focus {
 .reminder-item.ok {
   background: var(--green-bg);
   border-color: rgba(103, 183, 121, 0.38);
+}
+
+.next-box {
+  display: grid;
+  gap: 5px;
+  align-content: center;
+  padding: 10px 12px;
+  border-left: 3px solid var(--red-bright);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.next-box span,
+.next-box small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.next-box strong {
+  color: #fff;
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.reminder-item.due .next-box strong {
+  color: #ff8c90;
+}
+
+.reminder-item.soon .next-box strong {
+  color: #ffd08a;
 }
 
 .item-title {
@@ -535,6 +591,10 @@ th {
 
   .reminder-actions {
     justify-items: start;
+  }
+
+  .heading-actions {
+    justify-content: flex-start;
   }
 }
 

@@ -69,12 +69,12 @@
             <button type="submit">分析並加入</button>
           </form>
           <details class="ai-settings">
-            <summary>ChatGPT 分析設定</summary>
+            <summary>AI 影像分析設定</summary>
             <label>
               <span>AI API 端點</span>
               <input id="aiEndpoint" type="url" placeholder="例如 https://你的網域/api/analyze-maintenance" />
             </label>
-            <p class="settings-note">GitHub Pages 不能安全保存 API Key；把端點部署到 Vercel 後貼在這裡，照片與文字就會交給 ChatGPT 分析。</p>
+            <p class="settings-note">GitHub Pages 不能安全保存 API Key；把端點部署到 Vercel 後貼在這裡，照片與文字就會交給 AI 分析。</p>
           </details>
           <div class="quick-actions">
             <button type="button" data-quick="機油">機油</button>
@@ -94,7 +94,10 @@
           <div class="tab-view active" id="reminders">
             <div class="section-heading">
               <h2>下次要處理</h2>
-              <button class="ghost-button" id="exportButton" type="button">匯出 JSON</button>
+              <div class="heading-actions">
+                <button class="ghost-button" id="toggleRemindersButton" type="button">展開全部</button>
+                <button class="ghost-button" id="exportButton" type="button">匯出 JSON</button>
+              </div>
             </div>
             <div class="reminder-list" id="reminderList"></div>
           </div>

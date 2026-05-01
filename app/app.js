@@ -162,6 +162,7 @@ const els = {
   sampleButton: document.querySelector("#sampleButton"),
   clearButton: document.querySelector("#clearButton"),
   exportButton: document.querySelector("#exportButton"),
+  toggleRemindersButton: document.querySelector("#toggleRemindersButton"),
 };
 
 init();
@@ -190,6 +191,7 @@ function init() {
   els.sampleButton.addEventListener("click", fillSample);
   els.clearButton.addEventListener("click", clearRecords);
   els.exportButton.addEventListener("click", exportData);
+  els.toggleRemindersButton.addEventListener("click", toggleReminderExpansion);
   els.chatLog.append(document.querySelector("#botIntro").content.cloneNode(true));
   render();
 }
@@ -200,6 +202,7 @@ function loadState() {
       currentMileage: "",
       currentDate: toDateInput(new Date()),
       aiEndpoint: "",
+      showAllReminders: false,
     },
     records: [],
   };
@@ -226,7 +229,7 @@ function updateSettings(event) {
 function updateAiEndpoint() {
   state.settings.aiEndpoint = els.aiEndpoint.value.trim();
   saveState();
-  addMessage("bot", state.settings.aiEndpoint ? "AI 端點已儲存。之後文字與照片會優先交給 ChatGPT 分析。" : "AI 端點已清空，會改回本機分類模式。");
+  addMessage("bot", state.settings.aiEndpoint ? "AI 端點已儲存。之後文字與照片會優先交給 AI 分析。" : "AI 端點已清空，會改回本機分類模式。");
 }
 
 function defaultAiEndpoint() {
@@ -246,9 +249,9 @@ async function handleChatSubmit(event) {
   if (state.settings.aiEndpoint) {
     try {
       setChatBusy(true);
-      parsed = await analyzeWithChatGPT(text, imageFile);
+      parsed = await analyzeWithAI(text, imageFile);
     } catch (error) {
-      addMessage("bot alert", `ChatGPT 分析失敗：${error.message}。我先改用本機文字分類。`);
+      addMessage("bot alert", `AI 分析失敗：${error.message}。我先改用本機文字分類。`);
       parsed = parseMaintenanceText(text);
     } finally {
       setChatBusy(false);
@@ -274,13 +277,13 @@ async function handleChatSubmit(event) {
   render();
 
   const names = parsed.records.map((record) => `${record.item}（${record.action}）`).join("、");
-  const source = parsed.source === "chatgpt" ? "ChatGPT 已分析" : "已分類";
+  const source = parsed.source === "ai" ? "AI 已分析" : "已分類";
   addMessage("bot", `${source}並加入 ${parsed.records.length} 筆：${names}。我也順手更新了下次提醒。`);
   els.chatText.value = "";
   els.photoInput.value = "";
 }
 
-async function analyzeWithChatGPT(text, imageFile) {
+async function analyzeWithAI(text, imageFile) {
   const imageDataUrl = imageFile ? await fileToDataUrl(imageFile) : "";
   const response = await fetch(state.settings.aiEndpoint, {
     method: "POST",
@@ -327,7 +330,7 @@ function normalizeAiResult(data) {
       };
     })
     .filter(Boolean);
-  return { date, mileage, records, source: "chatgpt" };
+  return { date, mileage, records, source: "ai" };
 }
 
 function findMaintenanceItem(key, name) {
@@ -479,12 +482,25 @@ function renderReminders() {
   const reminders = getReminders();
   const due = reminders.filter((item) => item.status === "due").length;
   const soon = reminders.filter((item) => item.status === "soon").length;
+  const showAll = Boolean(state.settings.showAllReminders);
+  const visibleReminders = showAll ? reminders : reminders.filter((item) => item.status !== "ok");
   els.dueCount.textContent = due;
   els.soonCount.textContent = soon;
   els.minorService.textContent = nextServiceText(MINOR_SERVICE_KM);
   els.majorService.textContent = nextServiceText(MAJOR_SERVICE_KM);
+  els.toggleRemindersButton.textContent = showAll ? "收合正常項目" : "展開全部";
 
-  els.reminderList.innerHTML = reminders
+  if (!visibleReminders.length) {
+    els.reminderList.innerHTML = `
+      <div class="reminder-collapsed">
+        <strong>目前沒有到期項目</strong>
+        <span>一般保養項目已收合，需要時會自動出現在這裡。</span>
+      </div>
+    `;
+    return;
+  }
+
+  els.reminderList.innerHTML = visibleReminders
     .map(
       (item) => `
         <article class="reminder-item ${item.status}">
@@ -492,10 +508,14 @@ function renderReminders() {
             <div class="item-title">${escapeHtml(item.name)}</div>
             <div class="item-detail">${escapeHtml(item.action)} · ${escapeHtml(item.note)}</div>
           </div>
-          <div class="item-detail">${item.detail}</div>
+          <div class="next-box">
+            <span>${item.nextLabel}</span>
+            <strong>${item.remainingLabel}</strong>
+            <small>${item.dateLabel}</small>
+          </div>
           <div class="reminder-actions">
             <span class="pill ${item.status}">${statusText(item.status)}</span>
-            <button class="complete-button" type="button" data-complete="${item.key}">完成記錄</button>
+            <button class="complete-button" type="button" data-complete="${item.key}">完成</button>
           </div>
         </article>
       `,
@@ -507,13 +527,19 @@ function renderReminders() {
   });
 }
 
+function toggleReminderExpansion() {
+  state.settings.showAllReminders = !state.settings.showAllReminders;
+  saveState();
+  renderReminders();
+}
+
 function completeReminder(key) {
   const item = MAINTENANCE_ITEMS.find((entry) => entry.key === key);
   if (!item) return;
 
   const mileage = Number(state.settings.currentMileage) || 0;
   if (!mileage) {
-    addMessage("bot alert", "請先在上方填目前里程，再按完成記錄，這樣我才能幫你推算下一次提醒。");
+    addMessage("bot alert", "請先在上方填目前里程，再按完成，這樣我才能幫你推算下一次提醒。");
     els.currentMileage.focus();
     return;
   }
@@ -563,11 +589,10 @@ function getReminders() {
     const kmLeft = nextKm ? nextKm - currentMileage : Infinity;
     const daysLeft = nextDate ? Math.ceil((nextDate - currentDate) / 86400000) : Infinity;
     const status = kmLeft <= 0 || daysLeft <= 0 ? "due" : kmLeft <= 300 || daysLeft <= 30 ? "soon" : "ok";
-    const pieces = [];
-    if (nextKm) pieces.push(`下次 ${formatKm(nextKm)}${Number.isFinite(kmLeft) ? `，剩 ${formatKm(Math.max(kmLeft, 0))}` : ""}`);
-    if (nextDate) pieces.push(`日期 ${toDateInput(nextDate)}${Number.isFinite(daysLeft) ? `，剩 ${Math.max(daysLeft, 0)} 天` : ""}`);
-    if (!last) pieces.push("尚無此項紀錄，先用目前里程推估");
-    return { ...item, status, detail: pieces.join(" · ") };
+    const nextLabel = nextKm ? `下次 ${formatKm(nextKm)}` : nextDate ? `日期 ${toDateInput(nextDate)}` : "依車況檢查";
+    const remainingLabel = Number.isFinite(kmLeft) ? `剩 ${formatKm(Math.max(kmLeft, 0))}` : Number.isFinite(daysLeft) ? `剩 ${Math.max(daysLeft, 0)} 天` : "尚未建立週期";
+    const dateLabel = nextDate ? `日期 ${toDateInput(nextDate)}${Number.isFinite(daysLeft) ? ` · 剩 ${Math.max(daysLeft, 0)} 天` : ""}` : !last ? "尚無此項紀錄，先用目前里程推估" : "";
+    return { ...item, status, nextLabel, remainingLabel, dateLabel };
   }).sort((a, b) => statusRank(a.status) - statusRank(b.status));
 }
 
