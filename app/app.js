@@ -493,11 +493,50 @@ function renderReminders() {
             <div class="item-detail">${escapeHtml(item.action)} · ${escapeHtml(item.note)}</div>
           </div>
           <div class="item-detail">${item.detail}</div>
-          <span class="pill ${item.status}">${statusText(item.status)}</span>
+          <div class="reminder-actions">
+            <span class="pill ${item.status}">${statusText(item.status)}</span>
+            <button class="complete-button" type="button" data-complete="${item.key}">完成記錄</button>
+          </div>
         </article>
       `,
     )
     .join("");
+
+  document.querySelectorAll("[data-complete]").forEach((button) => {
+    button.addEventListener("click", () => completeReminder(button.dataset.complete));
+  });
+}
+
+function completeReminder(key) {
+  const item = MAINTENANCE_ITEMS.find((entry) => entry.key === key);
+  if (!item) return;
+
+  const mileage = Number(state.settings.currentMileage) || 0;
+  if (!mileage) {
+    addMessage("bot alert", "請先在上方填目前里程，再按完成記錄，這樣我才能幫你推算下一次提醒。");
+    els.currentMileage.focus();
+    return;
+  }
+
+  const date = state.settings.currentDate || toDateInput(new Date());
+  const note = prompt(`要幫「${item.name}」加備註嗎？`, item.note) ?? item.note;
+  const costInput = prompt("這次費用是多少？不填可直接按確定。", "");
+  const cost = costInput ? Number(String(costInput).replace(/[^\d]/g, "")) || "" : "";
+
+  state.records.unshift({
+    id: crypto.randomUUID(),
+    date,
+    mileage,
+    item: item.name,
+    key: item.key,
+    action: item.action,
+    cost,
+    note,
+    createdAt: new Date().toISOString(),
+  });
+  saveState();
+  render();
+  addMessage("bot", `已把「${item.name}」記錄完成，提醒已更新到下一次週期。`);
 }
 
 function renderSchedule() {

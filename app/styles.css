@@ -383,12 +383,31 @@ textarea:focus {
 .reminder-item,
 .schedule-item {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) minmax(180px, 1.35fr) auto;
+  grid-template-columns: minmax(120px, 1fr) minmax(180px, 1.35fr) minmax(120px, auto);
   gap: 12px;
   align-items: center;
   padding: 14px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.05);
+}
+
+.reminder-actions {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.complete-button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(240, 72, 79, 0.42);
+  background: rgba(200, 41, 47, 0.22);
+  color: var(--cream);
+  font-weight: 900;
+}
+
+.complete-button:hover {
+  background: rgba(200, 41, 47, 0.36);
 }
 
 .reminder-item.due {
@@ -512,6 +531,10 @@ th {
   .reminder-item,
   .schedule-item {
     grid-template-columns: 1fr;
+  }
+
+  .reminder-actions {
+    justify-items: start;
   }
 }
 
