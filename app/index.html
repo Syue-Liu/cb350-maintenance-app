@@ -46,10 +46,8 @@
       </section>
 
       <section class="dashboard" id="dashboard" aria-label="保養總覽"></section>
-
       <p class="status-strip" id="statusStrip" aria-live="polite"></p>
 
-      <!-- 提醒 -->
       <section class="view is-active" id="reminders" role="tabpanel" aria-labelledby="tab-reminders">
         <div class="view-head">
           <h2>下次要處理</h2>
@@ -58,61 +56,30 @@
         <div class="reminder-list" id="reminderList"></div>
       </section>
 
-      <!-- 新增 -->
       <section class="view" id="compose" role="tabpanel" aria-labelledby="tab-compose">
-        <div class="view-head">
-          <h2>記一筆</h2>
-        </div>
-
+        <div class="view-head"><h2>記一筆</h2></div>
         <p class="quick-label">常做的</p>
         <div class="quick-row" id="quickRow"></div>
-
         <form class="add-form" id="addForm">
           <input id="editRecordId" type="hidden" />
           <div class="field-row">
-            <label class="field">
-              <span>保養項目</span>
-              <select id="addItem"></select>
-            </label>
-            <label class="field">
-              <span>動作</span>
-              <select id="addAction"></select>
-            </label>
+            <label class="field"><span>保養項目</span><select id="addItem"></select></label>
+            <label class="field"><span>動作</span><select id="addAction"></select></label>
           </div>
-
           <div class="field-row">
-            <label class="field">
-              <span>日期</span>
-              <input id="addDate" type="date" />
-            </label>
-            <label class="field">
-              <span>里程</span>
-              <input id="addMileage" type="number" inputmode="numeric" min="0" step="1" />
-            </label>
+            <label class="field"><span>日期</span><input id="addDate" type="date" /></label>
+            <label class="field"><span>里程</span><input id="addMileage" type="number" inputmode="numeric" min="0" step="1" /></label>
           </div>
-
           <div class="field-row">
-            <label class="field">
-              <span>廠牌／規格 <em>選填</em></span>
-              <input id="addBrand" type="text" placeholder="例如 Motul 10W-40" />
-            </label>
-            <label class="field">
-              <span>金額 <em>選填</em></span>
-              <input id="addCost" type="number" inputmode="numeric" min="0" step="1" placeholder="0" />
-            </label>
+            <label class="field"><span>廠牌／規格 <em>選填</em></span><input id="addBrand" type="text" placeholder="例如 Motul 10W-40" /></label>
+            <label class="field"><span>金額 <em>選填</em></span><input id="addCost" type="number" inputmode="numeric" min="0" step="1" placeholder="0" /></label>
           </div>
-
-          <label class="field">
-            <span>備註 <em>選填</em></span>
-            <input id="addNote" type="text" placeholder="工資另計、下次記得帶保養手冊…" />
-          </label>
-
+          <label class="field"><span>備註 <em>選填</em></span><input id="addNote" type="text" placeholder="工資另計、下次記得帶保養手冊…" /></label>
           <div class="form-actions">
             <button class="btn quiet" id="cancelEditButton" type="button" hidden>取消編輯</button>
             <button class="btn primary block" id="saveRecordButton" type="submit">加入紀錄</button>
           </div>
         </form>
-
         <details class="text-entry">
           <summary>用一句話記</summary>
           <form class="composer" id="chatForm">
@@ -126,16 +93,10 @@
         </details>
       </section>
 
-      <!-- 歷史 -->
       <section class="view" id="history" role="tabpanel" aria-labelledby="tab-history">
-        <div class="view-head">
-          <h2>保養歷史</h2>
-        </div>
+        <div class="view-head"><h2>保養歷史</h2></div>
         <div class="history-tools" aria-label="搜尋與篩選保養歷史">
-          <label class="field search-field">
-            <span>搜尋</span>
-            <input id="historySearch" type="search" placeholder="項目、廠牌、備註、日期…" autocomplete="off" />
-          </label>
+          <label class="field search-field"><span>搜尋</span><input id="historySearch" type="search" placeholder="項目、廠牌、備註、日期…" autocomplete="off" /></label>
           <label class="field">
             <span>狀態</span>
             <select id="historyFilter">
@@ -149,42 +110,25 @@
         <div class="visit-list" id="visitList"></div>
       </section>
 
-      <!-- 花費 -->
       <section class="view" id="spending" role="tabpanel" aria-labelledby="tab-spending">
-        <div class="view-head">
-          <h2>花費總覽</h2>
-        </div>
-        <div id="spendSummary"></div>
-        <div id="spendByItem"></div>
-        <div id="spendByYear"></div>
+        <div class="view-head"><h2>花費總覽</h2></div>
+        <div id="spendSummary"></div><div id="spendByItem"></div><div id="spendByYear"></div>
       </section>
 
-      <!-- 週期 -->
       <section class="view" id="schedule" role="tabpanel" aria-labelledby="tab-schedule">
-        <div class="view-head">
-          <h2>原廠週期</h2>
-        </div>
+        <div class="view-head"><h2>原廠週期</h2></div>
         <div class="schedule-list" id="scheduleList"></div>
       </section>
 
-      <!-- 設定（不在分頁列，由標頭齒輪開啟） -->
       <section class="view" id="settings" role="region" aria-label="設定">
-        <div class="view-head">
-          <h2>設定</h2>
-          <button class="btn quiet" id="closeSettingsButton" type="button">完成</button>
-        </div>
-
+        <div class="view-head"><h2>設定</h2><button class="btn quiet" id="closeSettingsButton" type="button">完成</button></div>
         <div class="setting-block">
-          <label class="field">
-            <span>同步代碼</span>
-            <input id="syncKey" type="text" autocomplete="off" inputmode="latin" placeholder="至少 6 個字" />
-          </label>
+          <label class="field"><span>同步代碼</span><input id="syncKey" type="text" autocomplete="off" inputmode="latin" placeholder="至少 6 個字" /></label>
           <p class="hint" id="syncStatus">手機和電腦輸入同一組代碼就會共用資料。</p>
           <button class="btn block" id="syncTestButton" type="button">測試同步連線</button>
           <pre class="diag" id="syncDiag" hidden></pre>
           <p class="hint warn">這組代碼等於密碼，知道的人就能讀寫你的紀錄。建議用一長串隨機字元。</p>
         </div>
-
         <div class="setting-block">
           <button class="btn block" id="exportButton" type="button">匯出 JSON 備份</button>
           <button class="btn block danger" id="clearButton" type="button">清空所有紀錄</button>
@@ -195,10 +139,7 @@
     <p class="toast" id="toast" role="status" aria-live="polite" hidden></p>
 
     <nav class="tabbar" role="tablist" aria-label="主要分頁">
-      <button class="tab is-active" id="tab-reminders" data-tab="reminders" role="tab" aria-selected="true" aria-controls="reminders" type="button">
-        <span class="tab-dot" id="tabBadge" hidden></span>
-        提醒
-      </button>
+      <button class="tab is-active" id="tab-reminders" data-tab="reminders" role="tab" aria-selected="true" aria-controls="reminders" type="button"><span class="tab-dot" id="tabBadge" hidden></span>提醒</button>
       <button class="tab" id="tab-compose" data-tab="compose" role="tab" aria-selected="false" aria-controls="compose" type="button">新增</button>
       <button class="tab" id="tab-history" data-tab="history" role="tab" aria-selected="false" aria-controls="history" type="button">歷史</button>
       <button class="tab" id="tab-spending" data-tab="spending" role="tab" aria-selected="false" aria-controls="spending" type="button">花費</button>
@@ -208,6 +149,7 @@
     <script src="./maintenance-items.js"></script>
     <script src="./parser.js"></script>
     <script src="./app.js"></script>
+    <script src="./navigation-fixes.js"></script>
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
