@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0f1114" />
     <link rel="preload" as="image" href="./assets/cb350-rs-banner.webp" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/icon.svg" />
     <meta name="description" content="Honda CB350 RS 的保養手冊：記錄每次進廠的里程、項目與費用，依原廠週期提醒下次保養。" />
     <title>CB350 RS 保養手冊</title>
     <link rel="stylesheet" href="./styles.css" />
@@ -41,6 +44,8 @@
         </form>
       </section>
 
+      <section class="dashboard" id="dashboard" aria-label="保養總覽"></section>
+
       <p class="status-strip" id="statusStrip" aria-live="polite"></p>
 
       <!-- 提醒 -->
@@ -62,6 +67,7 @@
         <div class="quick-row" id="quickRow"></div>
 
         <form class="add-form" id="addForm">
+          <input id="editRecordId" type="hidden" />
           <div class="field-row">
             <label class="field">
               <span>保養項目</span>
@@ -100,7 +106,10 @@
             <input id="addNote" type="text" placeholder="工資另計、下次記得帶保養手冊…" />
           </label>
 
-          <button class="btn primary block" type="submit">加入紀錄</button>
+          <div class="form-actions">
+            <button class="btn quiet" id="cancelEditButton" type="button" hidden>取消編輯</button>
+            <button class="btn primary block" id="saveRecordButton" type="submit">加入紀錄</button>
+          </div>
         </form>
 
         <details class="text-entry">
@@ -120,6 +129,21 @@
       <section class="view" id="history" role="tabpanel" aria-labelledby="tab-history">
         <div class="view-head">
           <h2>保養歷史</h2>
+        </div>
+        <div class="history-tools" aria-label="搜尋與篩選保養歷史">
+          <label class="field search-field">
+            <span>搜尋</span>
+            <input id="historySearch" type="search" placeholder="項目、廠牌、備註、日期…" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span>狀態</span>
+            <select id="historyFilter">
+              <option value="all">全部紀錄</option>
+              <option value="recent">最近 12 個月</option>
+              <option value="cost">有花費</option>
+              <option value="frequent">常用項目</option>
+            </select>
+          </label>
         </div>
         <div class="visit-list" id="visitList"></div>
       </section>
@@ -183,5 +207,10 @@
     <script src="./maintenance-items.js"></script>
     <script src="./parser.js"></script>
     <script src="./app.js"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
+      }
+    </script>
   </body>
 </html>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="CB350 RS">
+  <rect width="512" height="512" rx="96" fill="#0f1114"/>
+  <path fill="#fffaf0" d="M94 297c12-65 72-116 156-116 91 0 154 57 168 116h-54c-14-35-56-68-113-68-51 0-91 29-105 68H94Z"/>
+  <path fill="#c8102e" d="M116 331h280v36H116z"/>
+  <circle cx="163" cy="359" r="48" fill="none" stroke="#fffaf0" stroke-width="28"/>
+  <circle cx="349" cy="359" r="48" fill="none" stroke="#fffaf0" stroke-width="28"/>
+  <path fill="#fffaf0" d="M152 148h208v36H152zM186 94h140v30H186z"/>
+</svg>

@@ -1,0 +1,19 @@
+{
+  "name": "CB350 RS 保養手冊",
+  "short_name": "CB350 保養",
+  "description": "Honda CB350 RS 的手機保養紀錄、提醒與花費總覽。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4efe4",
+  "theme_color": "#0f1114",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

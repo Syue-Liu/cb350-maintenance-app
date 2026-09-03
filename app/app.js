@@ -12,6 +12,8 @@ const MAJOR_SERVICE_KM = 20000;
 const MINOR_SERVICE_KM = 6000;
 const STORAGE_KEY = "cb350-maintenance-app-v1";
 const TOAST_MS = 4000;
+const SOON_KM = 300;
+const SOON_DAYS = 30;
 
 const ITEM_BY_KEY = new Map(MAINTENANCE_ITEMS.map((item) => [item.key, item]));
 const CATEGORY_BY_KEY = new Map(CATEGORIES.map((category) => [category.key, category]));
@@ -21,10 +23,11 @@ const state = loadState();
 const els = {};
 [
   "bikeForm", "currentMileage", "currentDate", "statusStrip",
+  "dashboard",
   "quickRow", "addForm", "addItem", "addAction", "addDate", "addMileage",
-  "addBrand", "addCost", "addNote",
+  "addBrand", "addCost", "addNote", "editRecordId", "saveRecordButton", "cancelEditButton",
   "chatForm", "chatText", "sampleButton",
-  "reminderList", "toggleRemindersButton", "visitList", "scheduleList",
+  "reminderList", "toggleRemindersButton", "visitList", "historySearch", "historyFilter", "scheduleList",
   "spendSummary", "spendByItem", "spendByYear",
   "syncKey", "syncStatus", "syncTestButton", "syncDiag",
   "exportButton", "clearButton", "settingsButton", "closeSettingsButton",
@@ -55,7 +58,10 @@ function init() {
 
   els.bikeForm.addEventListener("submit", updateSettings);
   els.addForm.addEventListener("submit", handleManualAdd);
+  els.cancelEditButton.addEventListener("click", cancelEdit);
   els.addItem.addEventListener("change", () => syncActionOptions(els.addItem.value));
+  els.historySearch.addEventListener("input", renderVisits);
+  els.historyFilter.addEventListener("change", renderVisits);
   els.chatForm.addEventListener("submit", handleTextAdd);
   els.sampleButton.addEventListener("click", fillSample);
   els.toggleRemindersButton.addEventListener("click", toggleReminderExpansion);
@@ -171,6 +177,9 @@ function prefillSpec(itemKey) {
 function resetAddForm({ keepItem = false } = {}) {
   if (!keepItem) els.addItem.value = MAINTENANCE_ITEMS[0].key;
   syncActionOptions(els.addItem.value);
+  els.editRecordId.value = "";
+  els.saveRecordButton.textContent = "加入紀錄";
+  els.cancelEditButton.hidden = true;
   els.addDate.value = state.settings.currentDate || toDateInput(new Date());
   els.addMileage.value = state.settings.currentMileage || "";
   els.addBrand.value = "";
@@ -183,6 +192,7 @@ function handleManualAdd(event) {
   event.preventDefault();
   const item = ITEM_BY_KEY.get(els.addItem.value);
   if (!item) return;
+  const editId = els.editRecordId.value;
 
   const mileage = Number(els.addMileage.value) || 0;
   if (!mileage) {
@@ -195,7 +205,7 @@ function handleManualAdd(event) {
   const extraNote = els.addNote.value.trim();
   const createdAt = new Date().toISOString();
   const record = {
-    id: newId(),
+    id: editId || newId(),
     date: els.addDate.value || toDateInput(new Date()),
     mileage,
     item: item.name,
@@ -208,14 +218,31 @@ function handleManualAdd(event) {
     updatedAt: createdAt,
   };
 
-  if (isDuplicateRecord(state.records, record)) {
+  if (editId) {
+    const previous = state.records.find((entry) => entry.id === editId);
+    if (!previous) {
+      setToast("找不到要編輯的紀錄，請重新選一次。", "warn");
+      resetAddForm();
+      return;
+    }
+    record.createdAt = previous.createdAt || createdAt;
+    record.updatedAt = createdAt;
+  }
+
+  const comparable = editId ? state.records.filter((entry) => entry.id !== editId) : state.records;
+  if (isDuplicateRecord(comparable, record)) {
     setToast(`${item.name}在同一天、同里程已經記過了。`, "warn");
     return;
   }
 
-  commitRecords([record], { mileage: record.mileage, date: record.date });
+  if (editId) {
+    state.records = state.records.map((entry) => (entry.id === editId ? record : entry));
+    commitRecords([], { mileage: record.mileage, date: record.date });
+  } else {
+    commitRecords([record], { mileage: record.mileage, date: record.date });
+  }
   resetAddForm();
-  setToast(`已加入 ${item.name}（${record.action}）${record.cost ? ` NT$ ${number(record.cost)}` : ""}`);
+  setToast(`${editId ? "已更新" : "已加入"} ${item.name}（${record.action}）${record.cost ? ` NT$ ${number(record.cost)}` : ""}`);
   switchTab("reminders");
 }
 
@@ -279,11 +306,56 @@ function fillSample() {
 /* ------------------------------------------------------------------ 畫面 */
 
 function render() {
+  renderDashboard();
   renderStatusStrip();
   renderReminders();
   renderVisits();
   renderSpending();
   renderSchedule();
+}
+
+function renderDashboard() {
+  const currentMileage = Number(state.settings.currentMileage) || 0;
+  const currentDate = state.settings.currentDate || toDateInput(new Date());
+  const reminders = getReminders();
+  const due = reminders.filter((item) => item.status === "due");
+  const soon = reminders.filter((item) => item.status === "soon");
+  const next = reminders.find((item) => item.status !== "ok") || reminders[0];
+  const nextMinor = currentMileage ? nextCycle(currentMileage, MINOR_SERVICE_KM) : 0;
+  const minorLeft = currentMileage ? Math.max(0, nextMinor - currentMileage) : 0;
+
+  els.dashboard.innerHTML = `
+    <div class="dash-hero">
+      <span class="dash-label">目前里程</span>
+      <strong>${currentMileage ? number(currentMileage) : "未設定"}<small>${currentMileage ? " km" : ""}</small></strong>
+      <span class="dash-date">基準日 ${escapeHtml(currentDate)}</span>
+    </div>
+    <div class="dash-grid">
+      <button class="dash-card urgent" type="button" data-dash-tab="reminders">
+        <span>逾期項目</span>
+        <strong>${due.length}</strong>
+        <small>${due.length ? due.slice(0, 2).map((item) => item.name).join("、") : "目前正常"}</small>
+      </button>
+      <button class="dash-card" type="button" data-dash-tab="reminders">
+        <span>下次保養</span>
+        <strong>${next ? escapeHtml(next.name) : "尚無"}</strong>
+        <small>${next ? stripTags(next.meta).split("，")[0] : "新增紀錄後開始追蹤"}</small>
+      </button>
+      <button class="dash-card" type="button" data-dash-tab="schedule">
+        <span>距離小保養</span>
+        <strong>${currentMileage ? number(minorLeft) : "--"}<small> km</small></strong>
+        <small>${currentMileage ? `目標 ${formatKm(nextMinor)}` : "先更新目前里程"}</small>
+      </button>
+      <button class="dash-card warm" type="button" data-dash-tab="reminders">
+        <span>快到期</span>
+        <strong>${soon.length}</strong>
+        <small>${soon.length ? soon.slice(0, 2).map((item) => item.name).join("、") : "30 天 / 300 km 內會提醒"}</small>
+      </button>
+    </div>`;
+
+  els.dashboard.querySelectorAll("[data-dash-tab]").forEach((button) => {
+    button.addEventListener("click", () => switchTab(button.dataset.dashTab));
+  });
 }
 
 function renderStatusStrip() {
@@ -350,6 +422,7 @@ function renderReminders() {
 }
 
 function renderVisits() {
+  const filteredRecords = getFilteredRecords();
   if (!state.records.length) {
     els.visitList.innerHTML = `
       <div class="empty">
@@ -358,9 +431,17 @@ function renderVisits() {
       </div>`;
     return;
   }
+  if (!filteredRecords.length) {
+    els.visitList.innerHTML = `
+      <div class="empty">
+        <b>找不到符合的紀錄</b>
+        換個關鍵字或篩選條件，就能再把維修單找回來。
+      </div>`;
+    return;
+  }
 
   const groups = new Map();
-  sortRecordsDesc(state.records).forEach((record) => {
+  sortRecordsDesc(filteredRecords).forEach((record) => {
     const key = `${record.date || "-"}|${record.mileage || 0}`;
     if (!groups.has(key)) groups.set(key, { date: record.date, mileage: record.mileage, items: [] });
     groups.get(key).items.push(record);
@@ -378,6 +459,9 @@ function renderVisits() {
               <span class="dot" style="background:${category ? category.color : "#999"}"></span>
               <span class="visit-name">${escapeHtml(record.item)}</span>
               <span class="visit-cost">${record.cost ? `NT$ ${number(record.cost)}` : ""}</span>
+              <button class="visit-edit" type="button" data-edit="${record.id}" aria-label="編輯 ${escapeHtml(
+                record.item,
+              )}">編輯</button>
               <button class="visit-del" type="button" data-delete="${record.id}" aria-label="刪除 ${escapeHtml(
                 record.item,
               )}">×</button>
@@ -399,6 +483,10 @@ function renderVisits() {
     })
     .join("");
 
+  els.visitList.querySelectorAll("[data-edit]").forEach((button) => {
+    button.addEventListener("click", () => editRecord(button.dataset.edit));
+  });
+
   els.visitList.querySelectorAll("[data-delete]").forEach((button) => {
     button.addEventListener("click", () => {
       state.records = state.records.filter((record) => record.id !== button.dataset.delete);
@@ -407,6 +495,62 @@ function renderVisits() {
       setToast("已刪除一筆。");
     });
   });
+}
+
+function getFilteredRecords() {
+  const query = String(els.historySearch.value || "").trim().toLowerCase();
+  const filter = els.historyFilter.value || "all";
+  const now = parseLocalDate(state.settings.currentDate || toDateInput(new Date()));
+  const recentCutoff = new Date(now);
+  recentCutoff.setMonth(recentCutoff.getMonth() - 12);
+
+  return state.records.filter((record) => {
+    if (filter === "cost" && !(Number(record.cost) > 0)) return false;
+    if (filter === "frequent" && !ITEM_BY_KEY.get(record.key)?.frequent) return false;
+    if (filter === "recent") {
+      const recordDate = record.date ? parseLocalDate(record.date) : null;
+      if (!recordDate || recordDate < recentCutoff) return false;
+    }
+    if (!query) return true;
+    const haystack = [
+      record.date,
+      record.mileage,
+      record.item,
+      record.action,
+      record.brand,
+      record.cost,
+      record.note,
+      CATEGORY_BY_KEY.get(ITEM_BY_KEY.get(record.key)?.category)?.name,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(query);
+  });
+}
+
+function editRecord(id) {
+  const record = state.records.find((entry) => entry.id === id);
+  if (!record) return;
+  switchTab("compose");
+  els.editRecordId.value = record.id;
+  els.addItem.value = record.key;
+  syncActionOptions(record.key);
+  els.addAction.value = record.action || ITEM_BY_KEY.get(record.key)?.action || "";
+  els.addDate.value = record.date || toDateInput(new Date());
+  els.addMileage.value = record.mileage || "";
+  els.addBrand.value = record.brand || "";
+  els.addCost.value = record.cost || "";
+  els.addNote.value = record.note || "";
+  els.saveRecordButton.textContent = "儲存修改";
+  els.cancelEditButton.hidden = false;
+  els.addItem.focus();
+  setToast("正在編輯這筆保養紀錄。");
+}
+
+function cancelEdit() {
+  resetAddForm();
+  setToast("已取消編輯。");
 }
 
 function renderSpending() {
@@ -543,7 +687,7 @@ function getReminders() {
 
     const kmLeft = nextKm ? nextKm - currentMileage : Infinity;
     const daysLeft = nextDate ? Math.ceil((nextDate - currentDate) / 86400000) : Infinity;
-    const status = kmLeft <= 0 || daysLeft <= 0 ? "due" : kmLeft <= 300 || daysLeft <= 30 ? "soon" : "ok";
+    const status = kmLeft <= 0 || daysLeft <= 0 ? "due" : kmLeft <= SOON_KM || daysLeft <= SOON_DAYS ? "soon" : "ok";
 
     // 進度條：這個週期已經用掉多少。km 與時間取用得比較多的那一個。
     const kmUsed = item.kmInterval && Number.isFinite(kmLeft) ? 1 - kmLeft / item.kmInterval : 0;
@@ -555,6 +699,10 @@ function getReminders() {
       ...item,
       status,
       progress: Math.round(progress),
+      nextKm,
+      kmLeft,
+      nextDate: nextDate ? toDateInput(nextDate) : "",
+      daysLeft,
       meta: buildReminderMeta({ nextKm, kmLeft, nextDate, daysLeft, last }),
     };
   }).sort((a, b) => statusRank(a.status) - statusRank(b.status) || b.progress - a.progress);
@@ -835,4 +983,10 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function stripTags(value) {
+  const element = document.createElement("div");
+  element.innerHTML = String(value || "");
+  return element.textContent || "";
 }

@@ -1,13 +1,13 @@
 :root {
   color-scheme: light;
 
-  --paper: #f5f6f7;
-  --card: #ffffff;
-  --ink: #1b1d21;
-  --ink-2: #606770;
-  --ink-3: #8a9099;
-  --line: #e4e7ea;
-  --line-strong: #c9ced4;
+  --paper: #f4efe4;
+  --card: #fffaf0;
+  --ink: #17181a;
+  --ink-2: #5e5b55;
+  --ink-3: #8b867c;
+  --line: #e3d8c6;
+  --line-strong: #c9baa2;
 
   --honda: #c8102e;
   --due: #c0261c;
@@ -17,10 +17,11 @@
   --ok: #2c6e52;
   --ok-bg: #eaf4ef;
   --focus: #1d4ed8;
+  --rubber: #0f1114;
 
   --tabbar-h: 58px;
   --banner-ink: #0f1114;
-  --radius: 10px;
+  --radius: 8px;
 }
 
 * {
@@ -49,6 +50,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
   color: inherit;
@@ -1003,5 +1005,335 @@ p {
 
   .spend-facts > div:last-child {
     border-right: 0;
+  }
+}
+
+/* ---------------------------------------------------------------- 儀表總覽與響應式優化 */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(15, 17, 20, 0.08), transparent 180px),
+    radial-gradient(circle at top right, rgba(200, 16, 46, 0.1), transparent 260px);
+}
+
+.shell {
+  width: min(860px, 100%);
+  padding-inline: 16px;
+}
+
+.masthead {
+  min-height: 138px;
+}
+
+.field input,
+.field select,
+.composer textarea {
+  background: #fffdf8;
+}
+
+.field select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+  border-color: var(--focus);
+}
+
+.btn {
+  background: #fffdf8;
+}
+
+.btn.primary {
+  border-color: var(--rubber);
+  background: var(--rubber);
+}
+
+.btn.primary:hover,
+.btn.primary:focus-visible {
+  border-color: var(--honda);
+  background: var(--honda);
+}
+
+.dashboard {
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+}
+
+.dash-hero,
+.dash-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: 0 10px 28px rgba(23, 24, 26, 0.07);
+}
+
+.dash-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 16px;
+  background:
+    linear-gradient(135deg, rgba(15, 17, 20, 0.96), rgba(15, 17, 20, 0.82)),
+    url("./assets/cb350-rs-red.jpg") center / cover;
+  color: #fffaf0;
+}
+
+.dash-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto 16px 0;
+  height: 3px;
+  background: var(--honda);
+}
+
+.dash-label,
+.dash-card span {
+  display: block;
+  color: inherit;
+  opacity: 0.72;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dash-hero strong {
+  display: block;
+  margin-top: 4px;
+  font-size: clamp(34px, 12vw, 54px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.dash-hero small,
+.dash-card small {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dash-date {
+  display: block;
+  margin-top: 8px;
+  color: rgba(255, 250, 240, 0.72);
+  font-size: 13px;
+}
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dash-card {
+  min-height: 112px;
+  padding: 14px;
+  text-align: left;
+}
+
+.dash-card strong {
+  display: block;
+  margin: 4px 0 6px;
+  font-size: 24px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.dash-card small {
+  display: block;
+  color: var(--ink-2);
+  line-height: 1.4;
+}
+
+.dash-card.urgent {
+  border-color: #e6aaa4;
+  background: var(--due-bg);
+}
+
+.dash-card.urgent strong {
+  color: var(--due);
+}
+
+.dash-card.warm {
+  border-color: #ead2a6;
+  background: var(--soon-bg);
+}
+
+.status-strip {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 250, 240, 0.72);
+}
+
+.tabbar {
+  background: rgba(255, 250, 240, 0.96);
+  backdrop-filter: blur(12px);
+}
+
+.reminder-list {
+  display: grid;
+  gap: 12px;
+  border-top: 0;
+}
+
+.reminder {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.reminder-top {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 8px;
+}
+
+.reminder-cat {
+  grid-row: 2;
+}
+
+.reminder-name {
+  font-size: 17px;
+}
+
+.reminder-state {
+  grid-row: 1 / span 2;
+  align-self: start;
+}
+
+.reminder-done:hover,
+.visit-edit:hover {
+  border-color: var(--honda);
+  color: var(--honda);
+}
+
+.quick-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.quick.is-active {
+  border-color: var(--honda);
+  box-shadow: inset 0 0 0 1px var(--honda);
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.form-actions .btn.block {
+  flex: 1;
+}
+
+.text-entry {
+  background: rgba(255, 250, 240, 0.54);
+}
+
+.history-tools {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 250, 240, 0.72);
+}
+
+.visit-head {
+  background: #f7efdf;
+}
+
+.visit-item {
+  grid-template-columns: auto 1fr auto auto auto;
+}
+
+.visit-edit {
+  grid-row: 1;
+  grid-column: 4;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.visit-del {
+  grid-column: 5;
+}
+
+.diag {
+  background: #fffdf8;
+}
+
+@media (min-width: 760px) {
+  .tabbar {
+    width: min(860px, 100%);
+    background: transparent;
+  }
+
+  .dashboard {
+    grid-template-columns: minmax(250px, 0.85fr) 1.5fr;
+    align-items: stretch;
+  }
+
+  .dash-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .quick-row {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+
+  .history-tools {
+    grid-template-columns: 1fr 180px;
+  }
+}
+
+@media (max-width: 520px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+
+  .odo-footer,
+  .reminder-bottom,
+  .visit-head,
+  .text-entry-actions,
+  .form-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .reminder-done,
+  .text-entry-actions .btn,
+  .form-actions .btn {
+    width: 100%;
+  }
+
+  .visit-item {
+    grid-template-columns: auto 1fr auto auto;
+  }
+
+  .visit-edit {
+    grid-column: 2 / 3;
+    grid-row: 2;
+  }
+
+  .visit-del {
+    grid-column: 4;
+  }
+
+  .dash-grid {
+    grid-template-columns: 1fr;
   }
 }
