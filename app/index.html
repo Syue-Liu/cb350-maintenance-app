@@ -2,153 +2,140 @@
 <html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Honda CB350 RS 保養助理</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f1114" />
+    <link rel="preload" as="image" href="./assets/cb350-rs-banner.webp" />
+    <meta name="description" content="Honda CB350 RS 的保養手冊：記錄每次進廠的里程、項目與費用，依原廠週期提醒下次保養。" />
+    <title>CB350 RS 保養手冊</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="app-shell">
-      <section class="hero" aria-label="車輛設定">
-        <div class="hero-media" aria-hidden="true"></div>
-        <div class="hero-shade"></div>
-        <div class="hero-content">
-          <div class="hero-copy">
-            <p class="eyebrow">Honda CB350 RS · Red</p>
-            <h1>CB350 RS 保養助理</h1>
-            <p class="hero-subtitle">把每次保養變成一條清楚的騎乘履歷，機油、鏈條、煞車油與大保養都替你盯著。</p>
+    <header class="masthead">
+      <div class="masthead-copy">
+        <p class="mark">Honda CB350 RS</p>
+        <h1>保養手冊</h1>
+      </div>
+      <button class="icon-btn" id="settingsButton" type="button" aria-label="設定">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="3.2" />
+          <path d="M12 2.6v3M12 18.4v3M21.4 12h-3M5.6 12h-3M18.6 5.4l-2.1 2.1M7.5 16.5l-2.1 2.1M18.6 18.6l-2.1-2.1M7.5 7.5L5.4 5.4" />
+        </svg>
+      </button>
+    </header>
+
+    <main class="shell">
+      <section class="odometer" aria-label="目前里程">
+        <form id="bikeForm">
+          <label class="odo-label" for="currentMileage">目前里程</label>
+          <div class="odo-readout">
+            <input
+              id="currentMileage"
+              name="currentMileage"
+              type="number"
+              inputmode="numeric"
+              min="0"
+              step="1"
+              placeholder="0"
+              aria-describedby="odoUnit"
+            />
+            <span class="odo-unit" id="odoUnit">km</span>
           </div>
-          <form class="bike-form" id="bikeForm">
-            <label>
-              <span>目前里程</span>
-              <input id="currentMileage" name="currentMileage" type="number" min="0" step="1" placeholder="例如 12800" />
-            </label>
-            <label>
+          <div class="odo-footer">
+            <label class="field">
               <span>檢查日期</span>
               <input id="currentDate" name="currentDate" type="date" />
             </label>
-            <button type="submit">更新狀態</button>
-          </form>
-        </div>
-      </section>
-
-      <section class="dashboard" aria-label="保養提醒">
-        <article class="summary-card danger">
-          <span>已到期</span>
-          <strong id="dueCount">0</strong>
-        </article>
-        <article class="summary-card warning">
-          <span>快到期</span>
-          <strong id="soonCount">0</strong>
-        </article>
-        <article class="summary-card">
-          <span>下次小保養</span>
-          <strong id="minorService">-</strong>
-        </article>
-        <article class="summary-card">
-          <span>下次大保養</span>
-          <strong id="majorService">-</strong>
-        </article>
-      </section>
-
-      <section class="workspace">
-        <aside class="chat-panel" aria-label="AI 互動機器人">
-          <div class="panel-title">
-            <div>
-              <p class="eyebrow">AI Bot</p>
-              <h2>貼上今天做了什麼</h2>
-            </div>
-            <button class="ghost-button" id="sampleButton" type="button">範例</button>
+            <button class="btn primary" type="submit">更新</button>
           </div>
-          <div class="chat-log" id="chatLog" aria-live="polite"></div>
-          <form class="chat-input" id="chatForm">
-            <textarea id="chatText" rows="6" placeholder="例如：今天 2026/5/1 里程 12850，換機油 10W-30、清潔潤滑鏈條，費用 950。"></textarea>
-            <label class="file-picker">
-              <span>上傳保養照片</span>
-              <input id="photoInput" type="file" accept="image/*" />
-            </label>
-            <button type="submit">分析並加入</button>
-          </form>
-          <details class="ai-settings">
-            <summary>AI 影像分析設定</summary>
-            <label>
-              <span>AI API 端點</span>
-              <input id="aiEndpoint" type="url" placeholder="例如 https://你的網域/api/analyze-maintenance" />
-            </label>
-            <p class="settings-note">GitHub Pages 不能安全保存 API Key；把端點部署到 Vercel 後貼在這裡，照片與文字就會交給 AI 分析。</p>
-          </details>
-          <details class="cloud-settings">
-            <summary>自動同步</summary>
-            <label>
-              <span>同步代碼</span>
-              <input id="syncKey" type="text" autocomplete="off" placeholder="例如 syue-cb350-rs" />
-            </label>
-            <p class="settings-note" id="syncStatus">輸入同一組同步代碼，手機和電腦會自動共用保養資料。</p>
-          </details>
-          <div class="quick-actions">
+        </form>
+      </section>
+
+      <p class="status-strip" id="statusStrip" aria-live="polite"></p>
+
+      <!-- 提醒 -->
+      <section class="view is-active" id="reminders" role="tabpanel" aria-labelledby="tab-reminders">
+        <div class="view-head">
+          <h2>下次要處理</h2>
+          <button class="btn quiet" id="toggleRemindersButton" type="button">展開全部</button>
+        </div>
+        <div class="reminder-list" id="reminderList"></div>
+      </section>
+
+      <!-- 新增 -->
+      <section class="view" id="compose" role="tabpanel" aria-labelledby="tab-compose">
+        <div class="view-head">
+          <h2>記一筆</h2>
+          <button class="btn quiet" id="sampleButton" type="button">看範例</button>
+        </div>
+        <form class="composer" id="chatForm">
+          <textarea
+            id="chatText"
+            rows="4"
+            placeholder="今天 里程 12850，換機油 10W-30、清潔潤滑鏈條，費用 950 元"
+          ></textarea>
+          <div class="chips">
             <button type="button" data-quick="機油">機油</button>
             <button type="button" data-quick="鏈條">鏈條</button>
             <button type="button" data-quick="煞車油">煞車油</button>
             <button type="button" data-quick="火星塞">火星塞</button>
           </div>
-        </aside>
+          <button class="btn primary block" type="submit">加入紀錄</button>
+        </form>
+        <p class="hint">
+          日期、里程、費用和保養項目都會自動抓出來。民國日期（115/02/04）也讀得懂。
+        </p>
+      </section>
 
-        <section class="records-panel" aria-label="保養資料">
-          <div class="tabs" role="tablist">
-            <button class="tab active" data-tab="reminders" type="button">提醒</button>
-            <button class="tab" data-tab="records" type="button">紀錄</button>
-            <button class="tab" data-tab="schedule" type="button">週期</button>
-          </div>
+      <!-- 歷史 -->
+      <section class="view" id="history" role="tabpanel" aria-labelledby="tab-history">
+        <div class="view-head">
+          <h2>保養歷史</h2>
+        </div>
+        <div class="visit-list" id="visitList"></div>
+      </section>
 
-          <div class="tab-view active" id="reminders">
-            <div class="section-heading">
-              <h2>下次要處理</h2>
-              <div class="heading-actions">
-                <button class="ghost-button" id="toggleRemindersButton" type="button">展開全部</button>
-                <button class="ghost-button" id="exportButton" type="button">匯出 JSON</button>
-              </div>
-            </div>
-            <div class="reminder-list" id="reminderList"></div>
-          </div>
+      <!-- 週期 -->
+      <section class="view" id="schedule" role="tabpanel" aria-labelledby="tab-schedule">
+        <div class="view-head">
+          <h2>原廠週期</h2>
+        </div>
+        <div class="schedule-list" id="scheduleList"></div>
+      </section>
 
-          <div class="tab-view" id="records">
-            <div class="section-heading">
-              <h2>保養紀錄</h2>
-              <button class="ghost-button danger-text" id="clearButton" type="button">清空</button>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>日期</th>
-                    <th>里程</th>
-                    <th>項目</th>
-                    <th>動作</th>
-                    <th>費用</th>
-                    <th>備註</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody id="recordRows"></tbody>
-              </table>
-            </div>
-          </div>
+      <!-- 設定（不在分頁列，由標頭齒輪開啟） -->
+      <section class="view" id="settings" role="region" aria-label="設定">
+        <div class="view-head">
+          <h2>設定</h2>
+          <button class="btn quiet" id="closeSettingsButton" type="button">完成</button>
+        </div>
 
-          <div class="tab-view" id="schedule">
-            <div class="section-heading">
-              <h2>CB350 RS 週期表</h2>
-            </div>
-            <div class="schedule-grid" id="scheduleGrid"></div>
-          </div>
-        </section>
+        <div class="setting-block">
+          <label class="field">
+            <span>同步代碼</span>
+            <input id="syncKey" type="text" autocomplete="off" inputmode="latin" placeholder="至少 6 個字" />
+          </label>
+          <p class="hint" id="syncStatus">手機和電腦輸入同一組代碼就會共用資料。</p>
+          <p class="hint warn">這組代碼等於密碼，知道的人就能讀寫你的紀錄。建議用一長串隨機字元。</p>
+        </div>
+
+        <div class="setting-block">
+          <button class="btn block" id="exportButton" type="button">匯出 JSON 備份</button>
+          <button class="btn block danger" id="clearButton" type="button">清空所有紀錄</button>
+        </div>
       </section>
     </main>
 
-    <template id="botIntro">
-      <div class="message bot">
-        <strong>保養助理</strong>
-        <p>把今天保養內容貼給我，我會自動抓項目、動作、里程、費用，加入紀錄後重新計算下次提醒。</p>
-      </div>
-    </template>
+    <p class="toast" id="toast" role="status" aria-live="polite" hidden></p>
+
+    <nav class="tabbar" role="tablist" aria-label="主要分頁">
+      <button class="tab is-active" id="tab-reminders" data-tab="reminders" role="tab" aria-selected="true" aria-controls="reminders" type="button">
+        <span class="tab-dot" id="tabBadge" hidden></span>
+        提醒
+      </button>
+      <button class="tab" id="tab-compose" data-tab="compose" role="tab" aria-selected="false" aria-controls="compose" type="button">新增</button>
+      <button class="tab" id="tab-history" data-tab="history" role="tab" aria-selected="false" aria-controls="history" type="button">歷史</button>
+      <button class="tab" id="tab-schedule" data-tab="schedule" role="tab" aria-selected="false" aria-controls="schedule" type="button">週期</button>
+    </nav>
 
     <script src="./maintenance-items.js"></script>
     <script src="./parser.js"></script>

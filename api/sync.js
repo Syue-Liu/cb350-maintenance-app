@@ -43,6 +43,10 @@ export default async function handler(req, res) {
       report.hint = "Vercel 專案沒有任何 Redis 環境變數。到 Storage 建立 Redis，然後 Redeploy。";
       return res.status(200).json(report);
     }
+    if (backend === "tcp") {
+      report.redisHost = safeHost(REDIS_URL);
+      report.note = "目前走 TCP 路徑。serverless 上建議改用提供 REST 變數的 Redis（例如 Upstash）。";
+    }
     try {
       await readKey(`${KEY_PREFIX}__diag__`);
       report.ok = true;
@@ -50,7 +54,7 @@ export default async function handler(req, res) {
     } catch (error) {
       report.ok = false;
       report.error = error.message;
-      report.hint = "環境變數有設，但連不上 Redis。檢查 token 是否過期，或改用 REST 變數。";
+      report.hint = explainRedisError(error);
     }
     return res.status(200).json(report);
   }
@@ -98,6 +102,39 @@ export default async function handler(req, res) {
       diag: "/api/sync?diag=1",
     });
   }
+}
+
+/** 只取出主機名稱，不會帶出帳密。 */
+function safeHost(redisUrl) {
+  try {
+    const url = new URL(redisUrl);
+    return `${url.hostname}:${url.port || 6379}`;
+  } catch {
+    return "(REDIS_URL 格式無法解析)";
+  }
+}
+
+/** 把底層錯誤翻成看得懂的排查方向。 */
+function explainRedisError(error) {
+  const code = error.code || "";
+  const message = String(error.message || "");
+
+  if (code === "ENOTFOUND" || /ENOTFOUND/.test(message)) {
+    return "主機名稱查不到（DNS ENOTFOUND）。這個 Redis 資料庫多半已經被刪除或搬遷，不是密碼問題。到 Redis 服務商確認資料庫還在不在，或改建一個新的並更新 REDIS_URL。";
+  }
+  if (code === "ECONNREFUSED" || /ECONNREFUSED/.test(message)) {
+    return "主機存在但拒絕連線。檢查 port 是否正確，以及該資料庫是否需要 TLS（改用 rediss:// 開頭）。";
+  }
+  if (/逾時|ETIMEDOUT|timed out/i.test(message)) {
+    return "連線逾時。可能是 TLS 設定不符，或該服務封鎖了 Vercel 的出站連線。";
+  }
+  if (/WRONGPASS|NOAUTH|invalid password|unauthorized|401|403/i.test(message)) {
+    return "認證失敗。密碼或 token 不正確，到服務商重新產生一組再 Redeploy。";
+  }
+  if (/ENOTSUP|Unsupported Redis response/i.test(message)) {
+    return "回應格式無法解析。該服務可能不是標準 Redis 協定，建議改用 REST 介面。";
+  }
+  return "連不上後端。確認環境變數指向的資料庫仍然存在，且設定變更後有重新部署。";
 }
 
 function safeJson(value) {

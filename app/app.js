@@ -11,77 +11,77 @@ const {
 const MAJOR_SERVICE_KM = 20000;
 const MINOR_SERVICE_KM = 6000;
 const STORAGE_KEY = "cb350-maintenance-app-v1";
+const TOAST_MS = 4000;
 
 const state = loadState();
 
 const els = {
+  bikeForm: document.querySelector("#bikeForm"),
   currentMileage: document.querySelector("#currentMileage"),
   currentDate: document.querySelector("#currentDate"),
-  bikeForm: document.querySelector("#bikeForm"),
+  statusStrip: document.querySelector("#statusStrip"),
+
   chatForm: document.querySelector("#chatForm"),
   chatText: document.querySelector("#chatText"),
-  photoInput: document.querySelector("#photoInput"),
-  aiEndpoint: document.querySelector("#aiEndpoint"),
+  sampleButton: document.querySelector("#sampleButton"),
+
+  reminderList: document.querySelector("#reminderList"),
+  toggleRemindersButton: document.querySelector("#toggleRemindersButton"),
+  visitList: document.querySelector("#visitList"),
+  scheduleList: document.querySelector("#scheduleList"),
+
   syncKey: document.querySelector("#syncKey"),
   syncStatus: document.querySelector("#syncStatus"),
-  chatLog: document.querySelector("#chatLog"),
-  recordRows: document.querySelector("#recordRows"),
-  reminderList: document.querySelector("#reminderList"),
-  scheduleGrid: document.querySelector("#scheduleGrid"),
-  dueCount: document.querySelector("#dueCount"),
-  soonCount: document.querySelector("#soonCount"),
-  minorService: document.querySelector("#minorService"),
-  majorService: document.querySelector("#majorService"),
-  sampleButton: document.querySelector("#sampleButton"),
-  clearButton: document.querySelector("#clearButton"),
   exportButton: document.querySelector("#exportButton"),
-  toggleRemindersButton: document.querySelector("#toggleRemindersButton"),
+  clearButton: document.querySelector("#clearButton"),
+  settingsButton: document.querySelector("#settingsButton"),
+  closeSettingsButton: document.querySelector("#closeSettingsButton"),
+
+  toast: document.querySelector("#toast"),
+  tabBadge: document.querySelector("#tabBadge"),
 };
+
+let toastTimer = 0;
 
 init();
 
 function init() {
-  const today = toDateInput(new Date());
   els.currentMileage.value = state.settings.currentMileage || "";
-  els.currentDate.value = state.settings.currentDate || today;
-  if (!state.settings.aiEndpoint) {
-    state.settings.aiEndpoint = defaultAiEndpoint();
-  }
-  els.aiEndpoint.value = state.settings.aiEndpoint || "";
-  // 端點沒有 UI 可以修改，所以每次載入都重算，
-  // 避免 localStorage 裡留著舊網域的值造成同步一直失敗。
-  state.settings.syncEndpoint = defaultSyncEndpoint();
+  els.currentDate.value = state.settings.currentDate || toDateInput(new Date());
   els.syncKey.value = state.settings.syncKey || "";
-  updateSyncStatus();
-  document.querySelectorAll(".tab").forEach((button) => {
-    button.addEventListener("click", () => switchTab(button.dataset.tab));
+
+  // 端點沒有 UI 可以修改，每次載入都重算，避免 localStorage 留著舊網域的值。
+  state.settings.syncEndpoint = defaultSyncEndpoint();
+
+  document.querySelectorAll(".tab").forEach((tab) => {
+    tab.addEventListener("click", () => switchTab(tab.dataset.tab));
   });
   document.querySelectorAll("[data-quick]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const item = button.dataset.quick;
-      els.chatText.value = `今天 ${els.currentDate.value} 里程 ${els.currentMileage.value || ""}，${quickText(item)}。`;
-      els.chatText.focus();
-    });
+    button.addEventListener("click", () => insertQuickText(button.dataset.quick));
   });
+
   els.bikeForm.addEventListener("submit", updateSettings);
-  els.chatForm.addEventListener("submit", handleChatSubmit);
-  els.aiEndpoint.addEventListener("change", updateAiEndpoint);
-  els.syncKey.addEventListener("change", updateSyncKey);
+  els.chatForm.addEventListener("submit", handleAdd);
   els.sampleButton.addEventListener("click", fillSample);
-  els.clearButton.addEventListener("click", clearRecords);
-  els.exportButton.addEventListener("click", exportData);
   els.toggleRemindersButton.addEventListener("click", toggleReminderExpansion);
-  els.chatLog.append(document.querySelector("#botIntro").content.cloneNode(true));
+  els.exportButton.addEventListener("click", exportData);
+  els.clearButton.addEventListener("click", clearRecords);
+  els.syncKey.addEventListener("change", updateSyncKey);
+  els.settingsButton.addEventListener("click", () => switchTab("settings"));
+  els.closeSettingsButton.addEventListener("click", () => switchTab("reminders"));
+
+  updateSyncStatus();
   render();
   downloadCloudData({ silent: true });
 }
+
+/* ------------------------------------------------------------------ 狀態 */
 
 function loadState() {
   const fallback = {
     settings: {
       currentMileage: "",
       currentDate: toDateInput(new Date()),
-      aiEndpoint: "",
       syncEndpoint: "",
       syncKey: "",
       lastCloudSyncAt: "",
@@ -90,7 +90,9 @@ function loadState() {
     records: [],
   };
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || fallback;
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (!saved) return fallback;
+    return { settings: { ...fallback.settings, ...saved.settings }, records: saved.records || [] };
   } catch {
     return fallback;
   }
@@ -111,25 +113,317 @@ function updateSettings(event) {
   state.settings.currentDate = els.currentDate.value || toDateInput(new Date());
   saveStateAndSync();
   render();
-  addMessage("bot", "已更新目前里程與檢查日期，提醒表也重新計算了。");
+  setToast("里程已更新，提醒重新算過了。");
 }
 
-function updateAiEndpoint() {
-  state.settings.aiEndpoint = els.aiEndpoint.value.trim();
-  saveState();
-  addMessage("bot", state.settings.aiEndpoint ? "AI 端點已儲存。之後文字與照片會優先交給 AI 分析。" : "AI 端點已清空，會改回本機分類模式。");
+/* ------------------------------------------------------------------ 新增紀錄 */
+
+function handleAdd(event) {
+  event.preventDefault();
+  const text = els.chatText.value.trim();
+  if (!text) {
+    setToast("先寫一句今天做了什麼。", "warn");
+    return;
+  }
+
+  const parsed = parseMaintenanceText(text, {
+    items: MAINTENANCE_ITEMS,
+    fallbackDate: state.settings.currentDate,
+    fallbackMileage: state.settings.currentMileage,
+    uuid: newId,
+  });
+
+  if (!parsed.records.length) {
+    setToast("沒抓到保養項目。試試「里程 12850 換機油、清潔鏈條，費用 950」。", "warn");
+    return;
+  }
+
+  const fresh = parsed.records.filter((record) => !isDuplicateRecord(state.records, record));
+  const skipped = parsed.records.length - fresh.length;
+
+  if (!fresh.length) {
+    setToast("同一天、同里程已經記過這些項目了。", "warn");
+    return;
+  }
+
+  state.records.unshift(...fresh);
+
+  // 補登舊維修單時，不可以把「目前里程/日期」往回改。
+  const parsedMileage = Number(parsed.mileage) || 0;
+  if (parsedMileage > (Number(state.settings.currentMileage) || 0)) {
+    state.settings.currentMileage = parsedMileage;
+    els.currentMileage.value = parsedMileage;
+  }
+  if (parsed.date && (!state.settings.currentDate || parsed.date >= state.settings.currentDate)) {
+    state.settings.currentDate = parsed.date;
+    els.currentDate.value = parsed.date;
+  }
+
+  saveStateAndSync();
+  render();
+
+  const names = fresh.map((record) => record.item).join("、");
+  setToast(`加入 ${fresh.length} 筆：${names}${skipped ? `（略過 ${skipped} 筆重複）` : ""}`);
+  els.chatText.value = "";
+  switchTab("reminders");
 }
 
-function updateSyncKey() {
-  state.settings.syncKey = els.syncKey.value.trim();
-  saveState();
-  updateSyncStatus();
-  downloadCloudData({ silent: false, uploadIfEmpty: true });
+function insertQuickText(item) {
+  const map = {
+    機油: "更換機油 10W-30",
+    鏈條: "清潔並潤滑鏈條",
+    煞車油: "更換煞車油 DOT 4",
+    火星塞: "更換火星塞 NGK MR6K-9",
+  };
+  const mileage = els.currentMileage.value || "";
+  const prefix = `${els.currentDate.value}${mileage ? ` 里程 ${mileage}` : ""}，`;
+  els.chatText.value = `${prefix}${map[item] || `檢查${item}`}`;
+  els.chatText.focus();
 }
+
+function fillSample() {
+  els.chatText.value = "今天 里程 12850，換機油 10W-30、清潔潤滑鏈條、檢查煞車皮，費用 950 元";
+  els.chatText.focus();
+}
+
+/* ------------------------------------------------------------------ 畫面 */
+
+function render() {
+  renderStatusStrip();
+  renderReminders();
+  renderVisits();
+  renderSchedule();
+}
+
+function renderStatusStrip() {
+  const reminders = getReminders();
+  const due = reminders.filter((item) => item.status === "due").length;
+  const soon = reminders.filter((item) => item.status === "soon").length;
+
+  els.tabBadge.hidden = due === 0;
+
+  if (!state.settings.currentMileage) {
+    els.statusStrip.innerHTML = "填上目前里程，就會開始幫你算下一次保養。";
+    return;
+  }
+  if (!due && !soon) {
+    els.statusStrip.innerHTML = `目前都在週期內，下次小保養 <span class="count">${formatKm(
+      nextCycle(Number(state.settings.currentMileage), MINOR_SERVICE_KM),
+    )}</span>`;
+    return;
+  }
+
+  const parts = [];
+  if (due) parts.push(`<span class="count due">${due}</span> 項已到期`);
+  if (soon) parts.push(`<span class="count soon">${soon}</span> 項快到期`);
+  els.statusStrip.innerHTML = parts.join("，");
+}
+
+function renderReminders() {
+  const reminders = getReminders();
+  const showAll = Boolean(state.settings.showAllReminders);
+  const visible = showAll ? reminders : reminders.filter((item) => item.status !== "ok");
+  els.toggleRemindersButton.textContent = showAll ? "只看要處理的" : "展開全部";
+
+  if (!visible.length) {
+    els.reminderList.innerHTML = `
+      <div class="empty">
+        <b>沒有到期項目</b>
+        正常的項目已收合，需要時會自動出現在這裡。
+      </div>`;
+    return;
+  }
+
+  els.reminderList.innerHTML = visible
+    .map(
+      (item) => `
+        <article class="reminder ${item.status}">
+          <div class="reminder-name">${escapeHtml(item.name)}</div>
+          <span class="reminder-state">${statusText(item.status)}</span>
+          <div class="reminder-meta">${item.meta}</div>
+          <button class="reminder-done" type="button" data-complete="${item.key}">記錄完成</button>
+        </article>`,
+    )
+    .join("");
+
+  els.reminderList.querySelectorAll("[data-complete]").forEach((button) => {
+    button.addEventListener("click", () => completeReminder(button.dataset.complete));
+  });
+}
+
+function renderVisits() {
+  if (!state.records.length) {
+    els.visitList.innerHTML = `
+      <div class="empty">
+        <b>還沒有紀錄</b>
+        到「新增」寫一句今天做了什麼，或按下方的常用項目。
+      </div>`;
+    return;
+  }
+
+  const groups = new Map();
+  sortRecordsDesc(state.records).forEach((record) => {
+    const key = `${record.date || "-"}|${record.mileage || 0}`;
+    if (!groups.has(key)) groups.set(key, { date: record.date, mileage: record.mileage, items: [] });
+    groups.get(key).items.push(record);
+  });
+
+  els.visitList.innerHTML = [...groups.values()]
+    .map((visit) => {
+      const total = visit.items.reduce((sum, record) => sum + (Number(record.cost) || 0), 0);
+      const rows = visit.items
+        .map(
+          (record) => `
+            <div class="visit-item">
+              <span class="visit-name">${escapeHtml(record.item)}</span>
+              <span class="visit-cost">${record.cost ? `NT$ ${number(record.cost)}` : ""}</span>
+              <button class="visit-del" type="button" data-delete="${record.id}" aria-label="刪除 ${escapeHtml(
+                record.item,
+              )}">×</button>
+              <span class="visit-action">${escapeHtml(record.action || "")}</span>
+              ${record.note ? `<span class="visit-note">${escapeHtml(record.note)}</span>` : ""}
+            </div>`,
+        )
+        .join("");
+      return `
+        <article class="visit">
+          <header class="visit-head">
+            <span class="visit-date">${escapeHtml(visit.date || "日期未填")}</span>
+            <span class="visit-odo">${visit.mileage ? formatKm(visit.mileage) : "里程未填"}${
+              total ? `　NT$ ${number(total)}` : ""
+            }</span>
+          </header>
+          ${rows}
+        </article>`;
+    })
+    .join("");
+
+  els.visitList.querySelectorAll("[data-delete]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.records = state.records.filter((record) => record.id !== button.dataset.delete);
+      saveStateAndSync();
+      render();
+      setToast("已刪除一筆。");
+    });
+  });
+}
+
+function renderSchedule() {
+  const mileage = Number(state.settings.currentMileage) || 0;
+  const milestones = mileage
+    ? `
+      <div class="schedule-row">
+        <span class="schedule-name">下次小保養</span>
+        <span class="schedule-every">${formatKm(nextCycle(mileage, MINOR_SERVICE_KM))}</span>
+      </div>
+      <div class="schedule-row">
+        <span class="schedule-name">下次大保養</span>
+        <span class="schedule-every">${formatKm(nextCycle(mileage, MAJOR_SERVICE_KM))}</span>
+      </div>`
+    : "";
+
+  els.scheduleList.innerHTML =
+    milestones +
+    MAINTENANCE_ITEMS.map((item) => {
+      const km = item.kmInterval ? `每 ${formatKm(item.kmInterval)}` : "";
+      const months = item.monthInterval ? `每 ${item.monthInterval} 個月` : "";
+      const every = [km, months].filter(Boolean).join("　或　") || "依車況";
+      return `
+        <div class="schedule-row">
+          <span class="schedule-name">${escapeHtml(item.name)}</span>
+          <span class="schedule-every">${every}</span>
+        </div>`;
+    }).join("");
+}
+
+/* ------------------------------------------------------------------ 提醒計算 */
+
+function getReminders() {
+  const currentMileage = Number(state.settings.currentMileage) || 0;
+  const currentDate = parseLocalDate(state.settings.currentDate || toDateInput(new Date()));
+
+  return MAINTENANCE_ITEMS.map((item) => {
+    const last = findLatestRecord(state.records, item);
+    const lastMileage = Number(last?.mileage) || 0;
+    const lastDate = last?.date ? parseLocalDate(last.date) : null;
+
+    const nextKm = item.kmInterval
+      ? lastMileage
+        ? lastMileage + item.kmInterval
+        : nextCycle(currentMileage, item.kmInterval)
+      : 0;
+    const nextDate = item.monthInterval && lastDate ? addMonths(lastDate, item.monthInterval) : null;
+
+    const kmLeft = nextKm ? nextKm - currentMileage : Infinity;
+    const daysLeft = nextDate ? Math.ceil((nextDate - currentDate) / 86400000) : Infinity;
+    const status = kmLeft <= 0 || daysLeft <= 0 ? "due" : kmLeft <= 300 || daysLeft <= 30 ? "soon" : "ok";
+
+    return { ...item, status, meta: buildReminderMeta({ nextKm, kmLeft, nextDate, daysLeft, last }) };
+  }).sort((a, b) => statusRank(a.status) - statusRank(b.status));
+}
+
+function buildReminderMeta({ nextKm, kmLeft, nextDate, daysLeft, last }) {
+  const parts = [];
+  if (nextKm) {
+    const left = Number.isFinite(kmLeft)
+      ? kmLeft <= 0
+        ? `已超過 <b>${formatKm(Math.abs(kmLeft))}</b>`
+        : `還有 <b>${formatKm(kmLeft)}</b>`
+      : "";
+    parts.push(`下次 <b>${formatKm(nextKm)}</b>${left ? `，${left}` : ""}`);
+  }
+  if (nextDate) {
+    const left = daysLeft <= 0 ? `已過期 <b>${Math.abs(daysLeft)}</b> 天` : `還有 <b>${daysLeft}</b> 天`;
+    parts.push(`${toDateInput(nextDate)}，${left}`);
+  }
+  if (!parts.length) parts.push(last ? "依車況檢查" : "還沒有紀錄，記一筆就會開始算");
+  return parts.join("<br>");
+}
+
+function completeReminder(key) {
+  const item = MAINTENANCE_ITEMS.find((entry) => entry.key === key);
+  if (!item) return;
+
+  const mileage = Number(state.settings.currentMileage) || 0;
+  if (!mileage) {
+    setToast("先填上目前里程，才能推算下一次。", "warn");
+    els.currentMileage.focus();
+    return;
+  }
+
+  const date = state.settings.currentDate || toDateInput(new Date());
+  const createdAt = new Date().toISOString();
+  const record = {
+    id: newId(),
+    date,
+    mileage,
+    item: item.name,
+    key: item.key,
+    action: item.action,
+    cost: "",
+    note: item.note,
+    createdAt,
+    updatedAt: createdAt,
+  };
+
+  if (isDuplicateRecord(state.records, record)) {
+    setToast(`${item.name}在同一天、同里程已經記過了。`, "warn");
+    return;
+  }
+
+  state.records.unshift(record);
+  saveStateAndSync();
+  render();
+  setToast(`${item.name}已記錄，提醒推到下一次。要補費用就到「新增」再寫一次。`);
+}
+
+/* ------------------------------------------------------------------ 雲端同步 */
 
 function defaultSyncEndpoint() {
   const host = window.location.hostname;
-  if (host === "localhost" || host === "127.0.0.1" || host.endsWith("github.io")) return "https://cb350-maintenance-app.vercel.app/api/sync";
+  if (host === "localhost" || host === "127.0.0.1" || host.endsWith("github.io")) {
+    return "https://cb350-maintenance-app.vercel.app/api/sync";
+  }
   return `${window.location.origin}/api/sync`;
 }
 
@@ -138,7 +432,6 @@ function cloudPayload() {
     settings: {
       currentMileage: state.settings.currentMileage,
       currentDate: state.settings.currentDate,
-      aiEndpoint: state.settings.aiEndpoint,
       showAllReminders: state.settings.showAllReminders,
     },
     records: state.records,
@@ -151,7 +444,7 @@ async function uploadCloudData({ silent = false } = {}) {
     return;
   }
   try {
-    setSyncStatus("正在自動備份...", "busy");
+    setSyncStatus("正在備份…", "busy");
     const response = await fetch(state.settings.syncEndpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -161,32 +454,32 @@ async function uploadCloudData({ silent = false } = {}) {
     if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
     state.settings.lastCloudSyncAt = result.data?.cloudUpdatedAt || new Date().toISOString();
     saveState();
-    setSyncStatus(`已自動備份：${formatDateTime(state.settings.lastCloudSyncAt)}`, "ok");
+    setSyncStatus(`已備份 ${formatDateTime(state.settings.lastCloudSyncAt)}`, "ok");
   } catch (error) {
-    setSyncStatus(`自動備份失敗：${error.message}`, "warn");
+    setSyncStatus(`備份失敗：${error.message}`, "warn");
     console.warn("[sync] upload failed", state.settings.syncEndpoint, error);
-    if (!silent) addMessage("bot alert", `自動備份失敗：${error.message}`);
+    if (!silent) setToast(`備份失敗：${error.message}`, "warn");
   }
 }
 
 async function downloadCloudData({ silent = false, uploadIfEmpty = false } = {}) {
-  state.settings.syncKey = els.syncKey.value.trim();
-  saveState();
   if (!state.settings.syncKey || !state.settings.syncEndpoint) {
-    setSyncStatus("設定同步代碼後，App 會自動下載與備份雲端資料。", "");
+    setSyncStatus("手機和電腦輸入同一組代碼就會共用資料。", "");
     return;
   }
   try {
-    setSyncStatus("正在同步雲端...", "busy");
+    setSyncStatus("正在同步…", "busy");
     const url = `${state.settings.syncEndpoint}?key=${encodeURIComponent(state.settings.syncKey)}`;
     const response = await fetch(url);
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+
     if (!result.data) {
-      setSyncStatus("這組代碼還沒有雲端資料；之後新增或更新會自動備份。", "warn");
+      setSyncStatus("這組代碼還沒有雲端資料，之後的變更會自動備份。", "warn");
       if (uploadIfEmpty && state.records.length) uploadCloudData({ silent: true });
       return;
     }
+
     state.settings = {
       ...state.settings,
       ...result.data.settings,
@@ -196,26 +489,37 @@ async function downloadCloudData({ silent = false, uploadIfEmpty = false } = {})
     };
     state.records = Array.isArray(result.data.records) ? result.data.records : [];
     saveState();
+
     els.currentMileage.value = state.settings.currentMileage || "";
     els.currentDate.value = state.settings.currentDate || toDateInput(new Date());
-    els.aiEndpoint.value = state.settings.aiEndpoint || "";
     render();
-    setSyncStatus(`已自動同步：${formatDateTime(state.settings.lastCloudSyncAt)}`, "ok");
-    if (!silent) addMessage("bot", "已從雲端同步保養資料，手機和電腦會使用同一份紀錄。");
+    setSyncStatus(`已同步 ${formatDateTime(state.settings.lastCloudSyncAt)}`, "ok");
+    if (!silent) setToast("已從雲端取回保養資料。");
   } catch (error) {
-    setSyncStatus(`自動同步失敗：${error.message}`, "warn");
+    setSyncStatus(`同步失敗：${error.message}`, "warn");
     console.warn("[sync] download failed", state.settings.syncEndpoint, error);
-    if (!silent) addMessage("bot alert", `自動同步失敗：${error.message}`);
+    if (!silent) setToast(`同步失敗：${error.message}`, "warn");
   }
+}
+
+function updateSyncKey() {
+  state.settings.syncKey = els.syncKey.value.trim();
+  saveState();
+  updateSyncStatus();
+  downloadCloudData({ silent: false, uploadIfEmpty: true });
 }
 
 function updateSyncStatus() {
   if (!state.settings.syncKey) {
-    setSyncStatus("設定同步代碼後，手機和電腦會自動共用保養資料。", "");
+    setSyncStatus("手機和電腦輸入同一組代碼就會共用資料。", "");
     return;
   }
-  const last = state.settings.lastCloudSyncAt ? `上次自動同步：${formatDateTime(state.settings.lastCloudSyncAt)}` : "正在等待第一次同步";
-  setSyncStatus(last, "ok");
+  setSyncStatus(
+    state.settings.lastCloudSyncAt
+      ? `上次同步 ${formatDateTime(state.settings.lastCloudSyncAt)}`
+      : "等待第一次同步",
+    "ok",
+  );
 }
 
 function setSyncStatus(text, status) {
@@ -223,235 +527,7 @@ function setSyncStatus(text, status) {
   els.syncStatus.dataset.status = status;
 }
 
-function defaultAiEndpoint() {
-  const host = window.location.hostname;
-  if (host === "localhost" || host === "127.0.0.1" || host.endsWith("github.io")) return "";
-  return `${window.location.origin}/api/analyze-maintenance`;
-}
-
-async function handleChatSubmit(event) {
-  event.preventDefault();
-  const text = els.chatText.value.trim();
-  const imageFile = els.photoInput.files?.[0] || null;
-  if (!text && !imageFile) return;
-  addMessage("user", imageFile ? `${text || "請分析這張保養照片"}（已附照片：${imageFile.name}）` : text);
-
-  let parsed;
-  if (state.settings.aiEndpoint) {
-    try {
-      setChatBusy(true);
-      parsed = await analyzeWithAI(text, imageFile);
-    } catch (error) {
-      addMessage("bot alert", `AI 分析失敗：${error.message}。我先改用本機文字分類。`);
-      parsed = parseLocal(text);
-    } finally {
-      setChatBusy(false);
-    }
-  } else {
-    if (imageFile) {
-      addMessage("bot alert", "照片分析需要先設定 AI API 端點；目前我只能用文字做本機分類。");
-    }
-    parsed = parseLocal(text);
-  }
-
-  if (!parsed.records.length) {
-    addMessage("bot alert", "我還沒抓到明確保養項目。可以試著寫「里程 12850 換機油、清潔鏈條、費用 950」。");
-    return;
-  }
-
-  const fresh = parsed.records.filter((record) => !isDuplicateRecord(state.records, record));
-  const skipped = parsed.records.length - fresh.length;
-
-  if (!fresh.length) {
-    addMessage("bot alert", "這些項目在同一天、同里程已經記過了，我就不重複加入。");
-    return;
-  }
-
-  state.records.unshift(...fresh);
-  // 補登舊維修單時，不可以把「目前里程/日期」往回改。
-  const parsedMileage = Number(parsed.mileage) || 0;
-  if (parsedMileage > (Number(state.settings.currentMileage) || 0)) {
-    state.settings.currentMileage = parsedMileage;
-  }
-  if (parsed.date && (!state.settings.currentDate || parsed.date >= state.settings.currentDate)) {
-    state.settings.currentDate = parsed.date;
-  }
-  els.currentMileage.value = state.settings.currentMileage || "";
-  els.currentDate.value = state.settings.currentDate || toDateInput(new Date());
-  saveStateAndSync();
-  render();
-
-  const names = fresh.map((record) => `${record.item}（${record.action}）`).join("、");
-  const source = parsed.source === "ai" ? "AI 已分析" : "已分類";
-  const skipNote = skipped ? `（略過 ${skipped} 筆重複）` : "";
-  addMessage("bot", `${source}並加入 ${fresh.length} 筆${skipNote}：${names}。我也順手更新了下次提醒。`);
-  els.chatText.value = "";
-  els.photoInput.value = "";
-}
-
-async function analyzeWithAI(text, imageFile) {
-  const imageDataUrl = imageFile ? await fileToDataUrl(imageFile) : "";
-  const response = await fetch(state.settings.aiEndpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      text,
-      imageDataUrl,
-      currentMileage: Number(state.settings.currentMileage) || "",
-      currentDate: state.settings.currentDate || toDateInput(new Date()),
-      maintenanceItems: MAINTENANCE_ITEMS.map(({ key, name, action, kmInterval, monthInterval, note }) => ({
-        key,
-        name,
-        action,
-        kmInterval,
-        monthInterval,
-        note,
-      })),
-    }),
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error || `HTTP ${response.status}`);
-  }
-  return normalizeAiResult(data);
-}
-
-function normalizeAiResult(data) {
-  const date = data.date || state.settings.currentDate || toDateInput(new Date());
-  const mileage = Number(data.mileage) || Number(state.settings.currentMileage) || "";
-  const records = (data.records || [])
-    .map((record) => {
-      const item = findMaintenanceItem(record.key, record.item);
-      if (!item) return null;
-      return {
-        id: newId(),
-        date: record.date || date,
-        mileage: Number(record.mileage) || mileage,
-        item: item.name,
-        key: item.key,
-        action: record.action || item.action,
-        cost: Number(record.cost) || "",
-        note: record.note || item.note,
-        createdAt: new Date().toISOString(),
-      };
-    })
-    .filter(Boolean);
-  return { date, mileage, records, source: "ai" };
-}
-
-function findMaintenanceItem(key, name) {
-  return MAINTENANCE_ITEMS.find((item) => item.key === key || item.name === name || item.name.includes(name || ""));
-}
-
-function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error("照片讀取失敗"));
-    reader.readAsDataURL(file);
-  });
-}
-
-function setChatBusy(isBusy) {
-  const button = els.chatForm.querySelector("button[type='submit']");
-  button.disabled = isBusy;
-  button.textContent = isBusy ? "AI 分析中..." : "分析並加入";
-}
-
-function parseLocal(text) {
-  return parseMaintenanceText(text, {
-    items: MAINTENANCE_ITEMS,
-    fallbackDate: state.settings.currentDate,
-    fallbackMileage: state.settings.currentMileage,
-    uuid: newId,
-  });
-}
-
-function render() {
-  renderRecords();
-  renderReminders();
-  renderSchedule();
-}
-
-function renderRecords() {
-  if (!state.records.length) {
-    els.recordRows.innerHTML = `<tr><td colspan="7"><div class="empty">還沒有紀錄，先把今天保養內容貼給 AI Bot。</div></td></tr>`;
-    return;
-  }
-
-  els.recordRows.innerHTML = sortRecordsDesc(state.records)
-    .map(
-      (record) => `
-        <tr>
-          <td>${escapeHtml(record.date || "-")}</td>
-          <td>${record.mileage ? formatKm(record.mileage) : "-"}</td>
-          <td>${escapeHtml(record.item)}</td>
-          <td>${escapeHtml(record.action)}</td>
-          <td>${record.cost ? `NT$ ${number(record.cost)}` : "-"}</td>
-          <td>${escapeHtml(record.note || "")}</td>
-          <td><button class="icon-button" title="刪除" data-delete="${record.id}">×</button></td>
-        </tr>
-      `,
-    )
-    .join("");
-
-  document.querySelectorAll("[data-delete]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.records = state.records.filter((record) => record.id !== button.dataset.delete);
-      saveStateAndSync();
-      render();
-    });
-  });
-}
-
-function renderReminders() {
-  const reminders = getReminders();
-  const due = reminders.filter((item) => item.status === "due").length;
-  const soon = reminders.filter((item) => item.status === "soon").length;
-  const showAll = Boolean(state.settings.showAllReminders);
-  const visibleReminders = showAll ? reminders : reminders.filter((item) => item.status !== "ok");
-  els.dueCount.textContent = due;
-  els.soonCount.textContent = soon;
-  els.minorService.textContent = nextServiceText(MINOR_SERVICE_KM);
-  els.majorService.textContent = nextServiceText(MAJOR_SERVICE_KM);
-  els.toggleRemindersButton.textContent = showAll ? "收合正常項目" : "展開全部";
-
-  if (!visibleReminders.length) {
-    els.reminderList.innerHTML = `
-      <div class="reminder-collapsed">
-        <strong>目前沒有到期項目</strong>
-        <span>一般保養項目已收合，需要時會自動出現在這裡。</span>
-      </div>
-    `;
-    return;
-  }
-
-  els.reminderList.innerHTML = visibleReminders
-    .map(
-      (item) => `
-        <article class="reminder-item ${item.status}">
-          <div>
-            <div class="item-title">${escapeHtml(item.name)}</div>
-            <div class="item-detail">${escapeHtml(item.action)} · ${escapeHtml(item.note)}</div>
-          </div>
-          <div class="next-box">
-            <span>${item.nextLabel}</span>
-            <strong>${item.remainingLabel}</strong>
-            <small>${item.dateLabel}</small>
-          </div>
-          <div class="reminder-actions">
-            <span class="pill ${item.status}">${statusText(item.status)}</span>
-            <button class="complete-button" type="button" data-complete="${item.key}">完成</button>
-          </div>
-        </article>
-      `,
-    )
-    .join("");
-
-  document.querySelectorAll("[data-complete]").forEach((button) => {
-    button.addEventListener("click", () => completeReminder(button.dataset.complete));
-  });
-}
+/* ------------------------------------------------------------------ 其他動作 */
 
 function toggleReminderExpansion() {
   state.settings.showAllReminders = !state.settings.showAllReminders;
@@ -459,74 +535,48 @@ function toggleReminderExpansion() {
   renderReminders();
 }
 
-function completeReminder(key) {
-  const item = MAINTENANCE_ITEMS.find((entry) => entry.key === key);
-  if (!item) return;
-
-  const mileage = Number(state.settings.currentMileage) || 0;
-  if (!mileage) {
-    addMessage("bot alert", "請先在上方填目前里程，再按完成，這樣我才能幫你推算下一次提醒。");
-    els.currentMileage.focus();
-    return;
-  }
-
-  const date = state.settings.currentDate || toDateInput(new Date());
-  const note = prompt(`要幫「${item.name}」加備註嗎？`, item.note) ?? item.note;
-  const costInput = prompt("這次費用是多少？不填可直接按確定。", "");
-  const cost = costInput ? Number(String(costInput).replace(/[^\d]/g, "")) || "" : "";
-
-  state.records.unshift({
-    id: newId(),
-    date,
-    mileage,
-    item: item.name,
-    key: item.key,
-    action: item.action,
-    cost,
-    note,
-    createdAt: new Date().toISOString(),
-  });
+function clearRecords() {
+  if (!confirm("確定要清空所有保養紀錄嗎？這個動作無法復原。")) return;
+  state.records = [];
   saveStateAndSync();
   render();
-  addMessage("bot", `已把「${item.name}」記錄完成，提醒已更新到下一次週期。`);
+  setToast("紀錄已清空，里程設定保留。", "warn");
 }
 
-function renderSchedule() {
-  els.scheduleGrid.innerHTML = MAINTENANCE_ITEMS.map(
-    (item) => `
-      <article class="schedule-item">
-        <div class="item-title">${escapeHtml(item.name)}</div>
-        <div class="item-detail">${item.kmInterval ? `每 ${formatKm(item.kmInterval)}` : "按時間"}${item.monthInterval ? ` / 每 ${item.monthInterval} 個月` : ""}</div>
-        <span class="pill">${escapeHtml(item.action)}</span>
-      </article>
-    `,
-  ).join("");
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `cb350-maintenance-${toDateInput(new Date())}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+  setToast("備份檔已下載。");
 }
 
-function getReminders() {
-  const currentMileage = Number(state.settings.currentMileage) || 0;
-  const currentDate = parseLocalDate(state.settings.currentDate || toDateInput(new Date()));
-  return MAINTENANCE_ITEMS.map((item) => {
-    const last = findLatestRecord(state.records, item);
-    const lastMileage = Number(last?.mileage) || 0;
-    const lastDate = last?.date ? parseLocalDate(last.date) : null;
-    const nextKm = item.kmInterval && lastMileage ? lastMileage + item.kmInterval : item.kmInterval ? nextCycle(currentMileage, item.kmInterval) : 0;
-    const nextDate = item.monthInterval && lastDate ? addMonths(lastDate, item.monthInterval) : null;
-    const kmLeft = nextKm ? nextKm - currentMileage : Infinity;
-    const daysLeft = nextDate ? Math.ceil((nextDate - currentDate) / 86400000) : Infinity;
-    const status = kmLeft <= 0 || daysLeft <= 0 ? "due" : kmLeft <= 300 || daysLeft <= 30 ? "soon" : "ok";
-    const nextLabel = nextKm ? `下次 ${formatKm(nextKm)}` : nextDate ? `日期 ${toDateInput(nextDate)}` : "依車況檢查";
-    const remainingLabel = Number.isFinite(kmLeft) ? `剩 ${formatKm(Math.max(kmLeft, 0))}` : Number.isFinite(daysLeft) ? `剩 ${Math.max(daysLeft, 0)} 天` : "尚未建立週期";
-    const dateLabel = nextDate ? `日期 ${toDateInput(nextDate)}${Number.isFinite(daysLeft) ? ` · 剩 ${Math.max(daysLeft, 0)} 天` : ""}` : !last ? "尚無此項紀錄，先用目前里程推估" : "";
-    return { ...item, status, nextLabel, remainingLabel, dateLabel };
-  }).sort((a, b) => statusRank(a.status) - statusRank(b.status));
+function switchTab(tabId) {
+  document.querySelectorAll(".view").forEach((view) => {
+    view.classList.toggle("is-active", view.id === tabId);
+  });
+  document.querySelectorAll(".tab").forEach((tab) => {
+    const active = tab.dataset.tab === tabId;
+    tab.classList.toggle("is-active", active);
+    tab.setAttribute("aria-selected", String(active));
+  });
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function nextServiceText(interval) {
-  const currentMileage = Number(state.settings.currentMileage) || 0;
-  if (!currentMileage) return "-";
-  return formatKm(nextCycle(currentMileage, interval));
+function setToast(text, kind = "ok") {
+  els.toast.textContent = text;
+  els.toast.dataset.kind = kind;
+  els.toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    els.toast.hidden = true;
+  }, TOAST_MS);
 }
+
+/* ------------------------------------------------------------------ 小工具 */
 
 function nextCycle(current, interval) {
   return Math.ceil((current + 1) / interval) * interval;
@@ -537,55 +587,7 @@ function statusRank(status) {
 }
 
 function statusText(status) {
-  return { due: "已到期", soon: "快到期", ok: "未到期" }[status] || status;
-}
-
-function switchTab(tabId) {
-  document.querySelectorAll(".tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.tab === tabId));
-  document.querySelectorAll(".tab-view").forEach((view) => view.classList.toggle("active", view.id === tabId));
-}
-
-function addMessage(type, text) {
-  const div = document.createElement("div");
-  div.className = `message ${type}`;
-  const label = type.includes("user") ? "你" : "保養助理";
-  div.innerHTML = `<strong>${label}</strong><p>${escapeHtml(text)}</p>`;
-  els.chatLog.append(div);
-  els.chatLog.scrollTop = els.chatLog.scrollHeight;
-}
-
-function fillSample() {
-  els.chatText.value = "今天 2026/5/1 里程 12850，換機油 10W-30、清潔潤滑鏈條、檢查煞車皮，費用 950 元。";
-  els.chatText.focus();
-}
-
-function quickText(item) {
-  const map = {
-    "機油": "更換機油 10W-30",
-    "鏈條": "清潔並潤滑鏈條",
-    "煞車油": "更換煞車油 DOT 4",
-    "火星塞": "更換火星塞 NGK MR6K-9",
-  };
-  return map[item] || `檢查${item}`;
-}
-
-function clearRecords() {
-  if (!confirm("確定要清空所有保養紀錄嗎？")) return;
-  state.records = [];
-  saveStateAndSync();
-  render();
-  addMessage("bot alert", "保養紀錄已清空。目前里程設定仍保留。");
-}
-
-function exportData() {
-  const data = JSON.stringify(state, null, 2);
-  const blob = new Blob([data], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `cb350-maintenance-${toDateInput(new Date())}.json`;
-  link.click();
-  URL.revokeObjectURL(url);
+  return { due: "已到期", soon: "快到期", ok: "正常" }[status] || status;
 }
 
 function addMonths(date, months) {

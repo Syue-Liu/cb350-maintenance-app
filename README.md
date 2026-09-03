@@ -1,119 +1,93 @@
-# Honda CB350 RS 保養助理
+# Honda CB350 RS 保養手冊
 
-這是一個可以放在 GitHub Pages 上使用的 Honda CB350 RS 保養記錄 App。
+記錄每次進廠的里程、項目與費用，依原廠週期提醒下一次保養。手機優先，資料存在瀏覽器裡，可用同步代碼在手機和電腦之間共用。
 
-功能：
+## 功能
 
-- 貼上中文保養描述，自動分類成保養紀錄
-- 可接 AI 端點分析文字與保養照片
-- 抓取日期、里程、費用、保養項目
-- 依 CB350 保養週期提醒下次更換/檢查
-- 顯示下次小保養與每 20,000 km 大保養里程
-- 可用同步代碼把手機和電腦資料同步到雲端
+- 用一句中文記一筆保養，自動抓出日期、里程、費用與保養項目
+- 依 CB350 週期計算下次更換／檢查的里程與日期
+- 保養歷史依「進廠次」分組，同一天同里程的項目收在一張維修單裡
+- 匯出 JSON 備份
+- 雲端同步（需自行部署 `api/sync.js` 與 Redis）
 
-文字解析（不需要 AI，離線可用）可辨識：
+## 文字解析
 
-- 民國日期，例如 `115/02/04` 或「民國115年2月4日」會轉成 `2026-02-04`
-- 里程（`里程 12850`、`12,850 km`、`ODO：8600`）
-- 費用（`費用 950 元`、`NT$1,200`、`$980`），分項費用會各自歸屬
-- 保養項目與動作（更換／清潔／潤滑／調整／檢查）
+不需要網路或 AI，離線也能用。看得懂：
 
-維修單照片範例可辨識：
+- 民國日期，`115/02/04` 或「民國115年2月4日」轉成 `2026-02-04`
+- 西元日期 `2026/5/1`、`2026-05-01`、`2026年5月1日`，以及「今天」「昨天」
+- 里程 `里程 12850`、`12,850 km`、`ODO：8600`
+- 費用 `費用 950 元`、`NT$1,200`、`$980`；分項寫法會各自歸屬，不會重複計算
+- 動作：更換／清潔／潤滑／調整／檢查
 
-- 民國日期，例如 `115/02/04` 會轉成 `2026-02-04`
-- 目前里程
-- 大保養、鏈條清潔、火星塞、煞車油、煞車皮、電瓶等品項
+例句：
 
-## GitHub Pages 設定
-
-1. 把這個專案推到 GitHub repository。
-2. 到 repository 的 Settings -> Pages。
-3. Source 選 `Deploy from a branch`。
-4. Branch 選 `main`，資料夾選 `/root`。
-5. 儲存後等待 GitHub Pages 產生網址。
-
-App 入口是 `index.html`，會自動轉到 `app/`。
-
-## AI 圖片/文字分析
-
-GitHub Pages 不能安全保存 AI API Key，所以圖片分析需要一個後端端點。
-
-這個 repo 已包含 Vercel API：
-
-```text
-api/analyze-maintenance.js
+```
+今天 里程 12850，換機油 10W-30、清潔潤滑鏈條、檢查煞車皮，費用 950 元
 ```
 
-部署到 Vercel 後，在 Vercel 專案設定新增環境變數。建議優先用 Gemini：
+## 部署
 
-```text
-GEMINI_API_KEY=你的 Gemini API Key
-GEMINI_MODEL=gemini-2.5-flash
+### GitHub Pages
+
+1. Settings → Pages
+2. Source 選 `Deploy from a branch`，Branch 選 `main`，資料夾 `/root`
+3. 入口是 `index.html`，會自動轉到 `app/`
+
+雲端同步需要後端，GitHub Pages 上會改打 Vercel 的端點。
+
+### Vercel
+
+直接匯入 repo 即可，不需要 build。API 函式在 `api/`。
+
+## 雲端同步設定
+
+`api/sync.js` 需要一組 Redis。在 Vercel 專案的 Storage 建立資料庫後，確認環境變數存在：
+
 ```
-
-也可以使用 OpenAI：
-
-```text
-OPENAI_API_KEY=你的 OpenAI API Key
-OPENAI_MODEL=gpt-5
-```
-
-如果同時設定 Gemini 和 OpenAI，後端會優先使用 Gemini。
-
-如果 App 也是從 Vercel 網址開啟，會自動使用：
-
-```text
-/api/analyze-maintenance
-```
-
-如果 App 繼續用 GitHub Pages，請在 App 的「AI 影像分析設定」貼上 Vercel 端點：
-
-```text
-https://你的-vercel-專案.vercel.app/api/analyze-maintenance
-```
-
-## 雲端同步
-
-App 已包含 Vercel KV/Upstash Redis 同步 API：
-
-```text
-api/sync.js
-```
-
-在 Vercel 專案新增 KV/Redis 儲存服務後，確認環境變數存在：
-
-```text
 KV_REST_API_URL
 KV_REST_API_TOKEN
 ```
 
-或：
+或（只有 TCP 的服務）：
 
-```text
-UPSTASH_REDIS_REST_URL
-UPSTASH_REDIS_REST_TOKEN
+```
+REDIS_URL
 ```
 
-重新部署後，在 App 的「雲端同步」輸入同一組同步代碼，例如 `syue-cb350-rs`，電腦按「上傳雲端」，手機按「下載雲端」即可同步。
+兩者都有時會優先使用 REST，在 serverless 上比較穩定。**環境變數不會套用到既有的部署，設定完要 Redeploy。**
 
+### 排查
+
+```
+/api/sync?diag=1
+```
+
+會回報目前使用哪種後端、環境變數有沒有設、連不連得上，並把底層錯誤翻成排查方向。不含 token 或保養資料。
+
+### 注意
+
+同步代碼等於密碼，知道的人就能讀寫你的紀錄。建議使用一長串隨機字元，不要用猜得到的名字。
 
 ## 本機測試
 
-解析邏輯放在 `app/parser.js`，是純函式、沒有 DOM 依賴，可直接用 Node 內建測試執行器跑：
+解析邏輯在 `app/parser.js`，純函式、無 DOM 依賴：
 
 ```
 node --test test/parser.test.js
 ```
 
-改動 regex 或關鍵字之後請先跑過測試，這部分是最容易改壞的地方。
+改動 regex 或關鍵字之後請先跑過測試。
 
 ## 檔案結構
 
 ```
-app/maintenance-items.js   保養項目與週期定義
-app/parser.js              文字解析（日期／里程／費用／項目比對），純函式
-app/app.js                 UI、狀態、雲端同步
-api/analyze-maintenance.js AI 影像與文字分析
-api/sync.js                雲端同步
-test/parser.test.js        解析器測試
+index.html                  轉址到 app/
+app/index.html              App 主頁（三支 js 的載入順序不可調換）
+app/maintenance-items.js    保養項目與週期定義
+app/parser.js               文字解析，純函式
+app/app.js                  UI、狀態、雲端同步
+app/styles.css              樣式
+api/sync.js                 雲端同步 API（含 ?diag=1 排查端點）
+test/parser.test.js         解析器測試
 ```
