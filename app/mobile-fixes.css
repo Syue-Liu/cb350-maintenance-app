@@ -1,0 +1,201 @@
+/* iPhone / mobile layout hardening
+ * Keep all content inside the visual viewport, respect notches / Dynamic Island,
+ * and neutralize intrinsic widths from iOS form controls.
+ */
+
+html {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  background: var(--paper);
+}
+
+body {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 12px);
+}
+
+.masthead {
+  width: 100%;
+  max-width: 100%;
+  padding-top: calc(18px + env(safe-area-inset-top));
+  min-height: calc(138px + env(safe-area-inset-top));
+}
+
+.shell,
+.view,
+.dashboard,
+.add-form,
+.field-row,
+.field,
+.history-tools,
+.text-entry,
+.reminder,
+.visit,
+.schedule-row {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.shell {
+  width: 100%;
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+}
+
+/* iOS form controls can keep an intrinsic minimum width and overflow CSS grids. */
+input,
+select,
+textarea,
+button {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.field input,
+.field select,
+.composer textarea {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 16px;
+}
+
+input[type="date"],
+input[type="number"],
+input[type="search"],
+input[type="text"] {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.odo-readout {
+  width: 100%;
+  min-width: 0;
+}
+
+.odo-readout input {
+  min-width: 0;
+  max-width: calc(100% - 48px);
+}
+
+.odo-footer {
+  width: 100%;
+  min-width: 0;
+}
+
+.tabbar {
+  width: 100%;
+  max-width: 100vw;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.tab {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .masthead {
+    padding-left: max(18px, env(safe-area-inset-left));
+    padding-right: max(18px, env(safe-area-inset-right));
+  }
+
+  .shell {
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+  }
+
+  .field-row {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .add-form {
+    width: 100%;
+    padding: 14px;
+    overflow: hidden;
+  }
+
+  .odo-footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .odo-footer .btn {
+    width: 100%;
+  }
+
+  .dashboard,
+  .dash-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dash-hero,
+  .dash-card,
+  .status-strip {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .visit-head,
+  .reminder-bottom,
+  .text-entry-actions,
+  .form-actions {
+    width: 100%;
+  }
+
+  .tab {
+    padding-inline: 4px;
+    font-size: 12px;
+  }
+}
+
+/* Small iPhones / Display Zoom */
+@media (max-width: 390px) {
+  .shell {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .masthead {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .odo-readout input {
+    font-size: clamp(42px, 14vw, 58px);
+  }
+
+  .dash-hero strong {
+    font-size: clamp(32px, 13vw, 48px);
+  }
+}
+
+@media (min-width: 760px) {
+  body {
+    min-height: 100vh;
+    padding-bottom: 0;
+  }
+
+  .masthead {
+    min-height: 168px;
+    padding-top: 26px;
+  }
+
+  .shell {
+    width: min(860px, 100%);
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+}
