@@ -2,6 +2,7 @@
  * - keep a separate scroll position for each tab
  * - show bike summary only on the home/reminders tab
  * - allow horizontal swipe between the five bottom tabs
+ * - mirror current mileage/date into the photo hero
  */
 (() => {
   const TAB_ORDER = ["reminders", "compose", "history", "spending", "schedule"];
@@ -13,10 +14,22 @@
   let touchStartY = 0;
   let touchStartTime = 0;
 
+  function syncHeroSummary() {
+    const masthead = document.querySelector(".masthead");
+    const mileageInput = document.querySelector("#currentMileage");
+    const dateInput = document.querySelector("#currentDate");
+    if (!masthead) return;
+
+    const mileage = Number(mileageInput?.value || 0);
+    masthead.dataset.mileage = mileage ? mileage.toLocaleString("zh-TW") : "—";
+    masthead.dataset.checkDate = dateInput?.value ? dateInput.value.replaceAll("-", ".") : "";
+  }
+
   function setPageMode(tabId) {
     const isHome = tabId === "reminders";
     document.body.classList.toggle("home-tab", isHome);
     document.body.classList.toggle("secondary-tab", !isHome);
+    if (isHome) syncHeroSummary();
   }
 
   window.switchTab = function switchTabAppStyle(tabId) {
@@ -47,43 +60,38 @@
     return Boolean(target.closest("input, textarea, select, button, a, details, summary"));
   }
 
-  document.addEventListener(
-    "touchstart",
-    (event) => {
-      if (event.touches.length !== 1 || isInteractiveTarget(event.target)) return;
-      const touch = event.touches[0];
-      touchStartX = touch.clientX;
-      touchStartY = touch.clientY;
-      touchStartTime = Date.now();
-    },
-    { passive: true },
-  );
+  document.addEventListener("touchstart", (event) => {
+    if (event.touches.length !== 1 || isInteractiveTarget(event.target)) return;
+    const touch = event.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    touchStartTime = Date.now();
+  }, { passive: true });
 
-  document.addEventListener(
-    "touchend",
-    (event) => {
-      if (!touchStartTime || event.changedTouches.length !== 1) return;
+  document.addEventListener("touchend", (event) => {
+    if (!touchStartTime || event.changedTouches.length !== 1) return;
 
-      const touch = event.changedTouches[0];
-      const dx = touch.clientX - touchStartX;
-      const dy = touch.clientY - touchStartY;
-      const elapsed = Date.now() - touchStartTime;
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - touchStartX;
+    const dy = touch.clientY - touchStartY;
+    const elapsed = Date.now() - touchStartTime;
+    touchStartTime = 0;
 
-      touchStartTime = 0;
+    if (activeTab === "settings") return;
+    if (elapsed > 700 || Math.abs(dx) < 55 || Math.abs(dx) <= Math.abs(dy) * 1.25) return;
 
-      if (activeTab === "settings") return;
-      if (elapsed > 700 || Math.abs(dx) < 55 || Math.abs(dx) <= Math.abs(dy) * 1.25) return;
+    const currentIndex = TAB_ORDER.indexOf(activeTab);
+    if (currentIndex < 0) return;
 
-      const currentIndex = TAB_ORDER.indexOf(activeTab);
-      if (currentIndex < 0) return;
+    const nextIndex = dx < 0 ? currentIndex + 1 : currentIndex - 1;
+    if (nextIndex < 0 || nextIndex >= TAB_ORDER.length) return;
+    window.switchTab(TAB_ORDER[nextIndex]);
+  }, { passive: true });
 
-      const nextIndex = dx < 0 ? currentIndex + 1 : currentIndex - 1;
-      if (nextIndex < 0 || nextIndex >= TAB_ORDER.length) return;
-
-      window.switchTab(TAB_ORDER[nextIndex]);
-    },
-    { passive: true },
-  );
+  document.querySelector("#bikeForm")?.addEventListener("submit", () => requestAnimationFrame(syncHeroSummary));
+  document.querySelector("#currentMileage")?.addEventListener("input", syncHeroSummary);
+  document.querySelector("#currentDate")?.addEventListener("change", syncHeroSummary);
 
   setPageMode(activeTab);
+  requestAnimationFrame(syncHeroSummary);
 })();
