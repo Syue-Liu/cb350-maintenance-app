@@ -126,9 +126,27 @@ test("動作按分段判斷，不會被句中其他動詞污染", () => {
 
 // ------------------------------------------------------------------ 備註
 
-test("備註會帶出規格", () => {
-  const result = parse("換機油 10W-30");
-  assert.match(result.records[0].note, /10W-30/);
+test("備註會帶出機油規格", () => {
+  assert.match(parse("換機油 10W-40").records[0].note, /10W-40/);
+  assert.match(parse("換機油 10w40").records[0].note, /10W-40/);
+  assert.match(parse("換機油 5W-30").records[0].note, /5W-30/);
+});
+
+test("每個項目都有分類與動作清單", () => {
+  const categories = new Set(require("../app/maintenance-items.js").CATEGORIES.map((c) => c.key));
+  MAINTENANCE_ITEMS.forEach((item) => {
+    assert.ok(categories.has(item.category), `${item.name} 分類無效`);
+    assert.ok(Array.isArray(item.actions) && item.actions.length, `${item.name} 缺少動作清單`);
+    assert.ok(item.actions.includes(item.action), `${item.name} 預設動作不在清單內`);
+  });
+});
+
+test("快捷項目存在且都是短週期", () => {
+  const frequent = MAINTENANCE_ITEMS.filter((item) => item.frequent);
+  assert.ok(frequent.length >= 3 && frequent.length <= 6);
+  frequent.forEach((item) => {
+    assert.ok(item.kmInterval <= 6000 || item.monthInterval <= 24, `${item.name} 週期太長`);
+  });
 });
 
 // ------------------------------------------------------------------ 整體
