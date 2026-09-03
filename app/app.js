@@ -48,9 +48,9 @@ function init() {
     state.settings.aiEndpoint = defaultAiEndpoint();
   }
   els.aiEndpoint.value = state.settings.aiEndpoint || "";
-  if (!state.settings.syncEndpoint) {
-    state.settings.syncEndpoint = defaultSyncEndpoint();
-  }
+  // 端點沒有 UI 可以修改，所以每次載入都重算，
+  // 避免 localStorage 裡留著舊網域的值造成同步一直失敗。
+  state.settings.syncEndpoint = defaultSyncEndpoint();
   els.syncKey.value = state.settings.syncKey || "";
   updateSyncStatus();
   document.querySelectorAll(".tab").forEach((button) => {
@@ -164,6 +164,7 @@ async function uploadCloudData({ silent = false } = {}) {
     setSyncStatus(`已自動備份：${formatDateTime(state.settings.lastCloudSyncAt)}`, "ok");
   } catch (error) {
     setSyncStatus(`自動備份失敗：${error.message}`, "warn");
+    console.warn("[sync] upload failed", state.settings.syncEndpoint, error);
     if (!silent) addMessage("bot alert", `自動備份失敗：${error.message}`);
   }
 }
@@ -203,6 +204,7 @@ async function downloadCloudData({ silent = false, uploadIfEmpty = false } = {})
     if (!silent) addMessage("bot", "已從雲端同步保養資料，手機和電腦會使用同一份紀錄。");
   } catch (error) {
     setSyncStatus(`自動同步失敗：${error.message}`, "warn");
+    console.warn("[sync] download failed", state.settings.syncEndpoint, error);
     if (!silent) addMessage("bot alert", `自動同步失敗：${error.message}`);
   }
 }
