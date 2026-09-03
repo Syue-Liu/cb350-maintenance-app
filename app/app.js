@@ -1,141 +1,12 @@
-const MAINTENANCE_ITEMS = [
-  {
-    key: "majorService",
-    name: "大保養",
-    action: "保養",
-    kmInterval: 20000,
-    monthInterval: 0,
-    keywords: ["大保養", "major service", "節流閥", "噴油嘴", "積碳", "燃油清潔", "齒盤"],
-    note: "每 20,000 km；可包含節流閥、噴油嘴、積碳清潔與全車檢查。",
-  },
-  {
-    key: "engineOil",
-    name: "機油",
-    action: "更換",
-    kmInterval: 4000,
-    monthInterval: 12,
-    keywords: ["機油", "換油", "engine oil", "10w-30", "5w-30", "gn4"],
-    note: "每 4,000 km 或每年；首保通常 1,000 km。",
-  },
-  {
-    key: "oilFilter",
-    name: "機油濾芯",
-    action: "更換",
-    kmInterval: 18000,
-    monthInterval: 36,
-    keywords: ["機油濾芯", "油芯", "oil filter", "15412"],
-    note: "約每 18,000 km；常見料號 15412-K0N-D01。",
-  },
-  {
-    key: "airFilter",
-    name: "空氣濾芯",
-    action: "更換",
-    kmInterval: 18000,
-    monthInterval: 36,
-    keywords: ["空濾", "空氣濾芯", "air filter", "air cleaner"],
-    note: "約每 18,000 km；多塵、潮濕環境提早。",
-  },
-  {
-    key: "sparkPlug",
-    name: "火星塞",
-    action: "更換",
-    kmInterval: 12000,
-    monthInterval: 12,
-    keywords: ["火星塞", "spark", "mr6k-9"],
-    note: "約每 12,000 km；常見規格 NGK MR6K-9。",
-  },
-  {
-    key: "valveClearance",
-    name: "汽門間隙",
-    action: "檢查",
-    kmInterval: 6000,
-    monthInterval: 6,
-    keywords: ["汽門", "鳥仔", "valve"],
-    note: "每 6,000 km 檢查，建議交給店家。",
-  },
-  {
-    key: "chain",
-    name: "傳動鏈條",
-    action: "檢查/清潔/潤滑",
-    kmInterval: 1000,
-    monthInterval: 0,
-    keywords: ["鏈條", "鍊條", "chain", "清鏈", "上油", "潤滑"],
-    note: "每 1,000 km；洗車、雨騎、多塵後也要潤滑。",
-  },
-  {
-    key: "chainSlider",
-    name: "鏈條滑塊",
-    action: "檢查",
-    kmInterval: 12000,
-    monthInterval: 12,
-    keywords: ["鏈條滑塊", "鍊條滑塊", "chain slider"],
-    note: "每 12,000 km 檢查磨耗。",
-  },
-  {
-    key: "brakeFluid",
-    name: "煞車油 DOT 4",
-    action: "檢查/更換",
-    kmInterval: 0,
-    monthInterval: 24,
-    annualCheck: true,
-    keywords: ["煞車油", "剎車油", "brake fluid", "dot4", "dot 4"],
-    note: "每年檢查，每 2 年更換。",
-  },
-  {
-    key: "brakePads",
-    name: "煞車皮",
-    action: "檢查",
-    kmInterval: 6000,
-    monthInterval: 12,
-    keywords: ["煞車皮", "來令", "brake pad"],
-    note: "每 6,000 km 或每年檢查磨耗。",
-  },
-  {
-    key: "clutch",
-    name: "離合器系統",
-    action: "檢查/調整",
-    kmInterval: 6000,
-    monthInterval: 6,
-    keywords: ["離合器", "離合", "clutch"],
-    note: "每 6,000 km 檢查自由間隙與作動。",
-  },
-  {
-    key: "tires",
-    name: "輪胎/輪框",
-    action: "檢查",
-    kmInterval: 6000,
-    monthInterval: 12,
-    keywords: ["輪胎", "胎壓", "胎紋", "輪框", "tire", "tyre"],
-    note: "前胎壓參考 29 psi；後 33 psi 單人 / 36 psi 雙載。",
-  },
-  {
-    key: "battery",
-    name: "電瓶/電系",
-    action: "檢查",
-    kmInterval: 6000,
-    monthInterval: 12,
-    keywords: ["電瓶", "電池", "battery", "燈", "喇叭", "方向燈"],
-    note: "每年檢查，也適合行前快速確認。",
-  },
-  {
-    key: "brakeSystem",
-    name: "煞車系統",
-    action: "檢查",
-    kmInterval: 6000,
-    monthInterval: 12,
-    keywords: ["煞車", "剎車", "卡鉗", "brake"],
-    note: "油管、卡鉗、洩漏、煞車手感。",
-  },
-  {
-    key: "general",
-    name: "螺絲螺帽/避震/側柱",
-    action: "檢查",
-    kmInterval: 6000,
-    monthInterval: 12,
-    keywords: ["螺絲", "螺帽", "避震", "側柱", "sidestand", "suspension"],
-    note: "每 6,000 km 或每年檢查重要固定件與作動。",
-  },
-];
+const MAINTENANCE_ITEMS = CB350Data.MAINTENANCE_ITEMS;
+const {
+  parseMaintenanceText,
+  findLatestRecord,
+  sortRecordsDesc,
+  isDuplicateRecord,
+  toDateInput,
+  defaultUuid: newId,
+} = CB350Parser;
 
 const MAJOR_SERVICE_KM = 20000;
 const MINOR_SERVICE_KM = 6000;
@@ -370,7 +241,7 @@ async function handleChatSubmit(event) {
       parsed = await analyzeWithAI(text, imageFile);
     } catch (error) {
       addMessage("bot alert", `AI 分析失敗：${error.message}。我先改用本機文字分類。`);
-      parsed = parseMaintenanceText(text);
+      parsed = parseLocal(text);
     } finally {
       setChatBusy(false);
     }
@@ -378,7 +249,7 @@ async function handleChatSubmit(event) {
     if (imageFile) {
       addMessage("bot alert", "照片分析需要先設定 AI API 端點；目前我只能用文字做本機分類。");
     }
-    parsed = parseMaintenanceText(text);
+    parsed = parseLocal(text);
   }
 
   if (!parsed.records.length) {
@@ -386,17 +257,32 @@ async function handleChatSubmit(event) {
     return;
   }
 
-  state.records.unshift(...parsed.records);
-  state.settings.currentMileage = parsed.mileage || state.settings.currentMileage;
-  state.settings.currentDate = parsed.date || state.settings.currentDate;
+  const fresh = parsed.records.filter((record) => !isDuplicateRecord(state.records, record));
+  const skipped = parsed.records.length - fresh.length;
+
+  if (!fresh.length) {
+    addMessage("bot alert", "這些項目在同一天、同里程已經記過了，我就不重複加入。");
+    return;
+  }
+
+  state.records.unshift(...fresh);
+  // 補登舊維修單時，不可以把「目前里程/日期」往回改。
+  const parsedMileage = Number(parsed.mileage) || 0;
+  if (parsedMileage > (Number(state.settings.currentMileage) || 0)) {
+    state.settings.currentMileage = parsedMileage;
+  }
+  if (parsed.date && (!state.settings.currentDate || parsed.date >= state.settings.currentDate)) {
+    state.settings.currentDate = parsed.date;
+  }
   els.currentMileage.value = state.settings.currentMileage || "";
   els.currentDate.value = state.settings.currentDate || toDateInput(new Date());
   saveStateAndSync();
   render();
 
-  const names = parsed.records.map((record) => `${record.item}（${record.action}）`).join("、");
+  const names = fresh.map((record) => `${record.item}（${record.action}）`).join("、");
   const source = parsed.source === "ai" ? "AI 已分析" : "已分類";
-  addMessage("bot", `${source}並加入 ${parsed.records.length} 筆：${names}。我也順手更新了下次提醒。`);
+  const skipNote = skipped ? `（略過 ${skipped} 筆重複）` : "";
+  addMessage("bot", `${source}並加入 ${fresh.length} 筆${skipNote}：${names}。我也順手更新了下次提醒。`);
   els.chatText.value = "";
   els.photoInput.value = "";
 }
@@ -436,7 +322,7 @@ function normalizeAiResult(data) {
       const item = findMaintenanceItem(record.key, record.item);
       if (!item) return null;
       return {
-        id: crypto.randomUUID(),
+        id: newId(),
         date: record.date || date,
         mileage: Number(record.mileage) || mileage,
         item: item.name,
@@ -470,93 +356,13 @@ function setChatBusy(isBusy) {
   button.textContent = isBusy ? "AI 分析中..." : "分析並加入";
 }
 
-function parseMaintenanceText(text) {
-  const normalized = text.toLowerCase();
-  const date = parseDate(text) || state.settings.currentDate || toDateInput(new Date());
-  const mileage = parseMileage(text) || Number(state.settings.currentMileage) || "";
-  const cost = parseCost(text);
-  const matchedItems = MAINTENANCE_ITEMS.filter((item) => {
-    const matched = item.keywords.some((keyword) => normalized.includes(keyword.toLowerCase()));
-    if (!matched) return false;
-    if (item.key === "brakeSystem" && /煞車油|剎車油|brake fluid|煞車皮|來令|brake pad/.test(normalized)) return false;
-    return true;
+function parseLocal(text) {
+  return parseMaintenanceText(text, {
+    items: MAINTENANCE_ITEMS,
+    fallbackDate: state.settings.currentDate,
+    fallbackMileage: state.settings.currentMileage,
+    uuid: newId,
   });
-
-  const unique = new Map();
-  matchedItems.forEach((item) => unique.set(item.key, item));
-
-  const records = [...unique.values()].map((item) => ({
-    id: crypto.randomUUID(),
-    date,
-    mileage,
-    item: item.name,
-    key: item.key,
-    action: parseAction(text, item) || item.action,
-    cost: cost || "",
-    note: buildNote(text, item),
-    createdAt: new Date().toISOString(),
-  }));
-
-  return { date, mileage, cost, records };
-}
-
-function parseDate(text) {
-  const match = text.match(/(20\d{2})[/-](\d{1,2})[/-](\d{1,2})|(\d{1,2})[/-](\d{1,2})/);
-  if (!match) {
-    if (/今天/.test(text)) return toDateInput(new Date());
-    if (/昨天/.test(text)) {
-      const d = new Date();
-      d.setDate(d.getDate() - 1);
-      return toDateInput(d);
-    }
-    return "";
-  }
-  const year = match[1] || new Date().getFullYear();
-  const month = match[2] || match[4];
-  const day = match[3] || match[5];
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
-
-function parseMileage(text) {
-  const match = text.match(/(?:里程|公里|km|odometer)\s*[:：]?\s*(\d{3,6})|(\d{3,6})\s*(?:km|公里)/i);
-  return match ? Number(match[1] || match[2]) : 0;
-}
-
-function parseCost(text) {
-  const match = text.match(/(?:費用|花費|價格|nt\$?|元)\s*[:：]?\s*(\d{2,6})|(\d{2,6})\s*(?:元|塊)/i);
-  return match ? Number(match[1] || match[2]) : "";
-}
-
-function parseAction(text, item) {
-  const hasReplace = /更換|換/.test(text);
-  const hasClean = /清潔|清/.test(text);
-  const hasLube = /潤滑|上油/.test(text);
-  const hasAdjust = /調整|調/.test(text);
-  const hasInspect = /檢查|看/.test(text);
-  if (item.key === "chain") {
-    if (hasClean && hasLube) return "清潔/潤滑";
-    if (hasClean) return "清潔";
-    if (hasLube) return "潤滑";
-    if (hasAdjust) return "調整";
-  }
-  if (hasReplace) return "更換";
-  if (hasAdjust) return "調整";
-  if (hasClean && hasLube) return "清潔/潤滑";
-  if (hasClean) return "清潔";
-  if (hasLube) return "潤滑";
-  if (hasInspect) return "檢查";
-  return "";
-}
-
-function buildNote(text, item) {
-  const specs = [];
-  const oil = text.match(/\b(?:5w|10w)-?30\b/i);
-  const dot = text.match(/\bdot\s*4\b/i);
-  const plug = text.match(/\bmr6k-9\b/i);
-  if (oil) specs.push(oil[0].toUpperCase());
-  if (dot) specs.push("DOT 4");
-  if (plug) specs.push("NGK MR6K-9");
-  return specs.length ? `${specs.join(" / ")}；${item.note}` : item.note;
 }
 
 function render() {
@@ -571,7 +377,7 @@ function renderRecords() {
     return;
   }
 
-  els.recordRows.innerHTML = state.records
+  els.recordRows.innerHTML = sortRecordsDesc(state.records)
     .map(
       (record) => `
         <tr>
@@ -668,7 +474,7 @@ function completeReminder(key) {
   const cost = costInput ? Number(String(costInput).replace(/[^\d]/g, "")) || "" : "";
 
   state.records.unshift({
-    id: crypto.randomUUID(),
+    id: newId(),
     date,
     mileage,
     item: item.name,
@@ -699,7 +505,7 @@ function getReminders() {
   const currentMileage = Number(state.settings.currentMileage) || 0;
   const currentDate = parseLocalDate(state.settings.currentDate || toDateInput(new Date()));
   return MAINTENANCE_ITEMS.map((item) => {
-    const last = state.records.find((record) => record.key === item.key || record.item === item.name);
+    const last = findLatestRecord(state.records, item);
     const lastMileage = Number(last?.mileage) || 0;
     const lastDate = last?.date ? parseLocalDate(last.date) : null;
     const nextKm = item.kmInterval && lastMileage ? lastMileage + item.kmInterval : item.kmInterval ? nextCycle(currentMileage, item.kmInterval) : 0;
@@ -789,10 +595,6 @@ function addMonths(date, months) {
 function parseLocalDate(value) {
   const [year, month, day] = String(value).split("-").map(Number);
   return new Date(year, month - 1, day);
-}
-
-function toDateInput(date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function formatKm(value) {
