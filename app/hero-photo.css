@@ -1,9 +1,0 @@
-/* Personal CB350 RS hero photo supplied by the owner. */
-.masthead {
-  min-height: min(44vh, 390px);
-  background-image: url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBD...PLACEHOLDER...");
-  background-position: center 52%;
-  background-size: cover;
-  align-items: flex-end;
-  padding-bottom: 22px;
-}
