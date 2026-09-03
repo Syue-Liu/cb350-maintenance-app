@@ -1,9 +1,10 @@
-const CACHE_NAME = "cb350-maintenance-v5";
+const CACHE_NAME = "cb350-maintenance-v6";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./mobile-fixes.css",
+  "./hero-overrides.css",
   "./maintenance-items.js",
   "./parser.js",
   "./app.js",
@@ -21,9 +22,7 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))),
+    caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))),
   );
   self.clients.claim();
 });
@@ -32,7 +31,6 @@ self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (request.method !== "GET") return;
   if (new URL(request.url).pathname.includes("/api/")) return;
-
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
