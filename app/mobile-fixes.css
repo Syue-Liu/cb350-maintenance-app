@@ -47,6 +47,22 @@ body {
   padding-right: max(16px, env(safe-area-inset-right));
 }
 
+/* Home-only summary. Secondary tabs start directly at their own page content. */
+body.secondary-tab .masthead,
+body.secondary-tab .odometer,
+body.secondary-tab .dashboard,
+body.secondary-tab .status-strip {
+  display: none;
+}
+
+body.secondary-tab .shell {
+  padding-top: calc(env(safe-area-inset-top) + 14px);
+}
+
+body.secondary-tab .view.is-active {
+  padding-top: 8px;
+}
+
 /* iOS form controls can keep an intrinsic minimum width and overflow CSS grids. */
 input,
 select,
@@ -70,9 +86,25 @@ input[type="date"],
 input[type="number"],
 input[type="search"],
 input[type="text"] {
+  display: block;
+  box-sizing: border-box;
   width: 100%;
   max-width: 100%;
   min-width: 0;
+}
+
+/* Safari date controls have an intrinsic width that can escape narrow cards. */
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  text-align: left;
+  overflow: hidden;
+}
+
+input[type="date"]::-webkit-date-and-time-value {
+  min-width: 0;
+  width: 100%;
+  text-align: left;
 }
 
 .odo-readout {
@@ -123,7 +155,16 @@ input[type="text"] {
   .add-form {
     width: 100%;
     padding: 14px;
-    overflow: hidden;
+    overflow: clip;
+  }
+
+  .add-form .field,
+  .add-form .field-row,
+  .add-form input,
+  .add-form select {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
   .odo-footer {
@@ -197,5 +238,29 @@ input[type="text"] {
     width: min(860px, 100%);
     padding-left: 32px;
     padding-right: 32px;
+  }
+
+  body.secondary-tab .masthead,
+  body.secondary-tab .odometer,
+  body.secondary-tab .dashboard,
+  body.secondary-tab .status-strip {
+    display: initial;
+  }
+
+  body.secondary-tab .masthead {
+    display: flex;
+  }
+
+  body.secondary-tab .odometer,
+  body.secondary-tab .dashboard {
+    display: grid;
+  }
+
+  body.secondary-tab .status-strip {
+    display: block;
+  }
+
+  body.secondary-tab .shell {
+    padding-top: 0;
   }
 }
