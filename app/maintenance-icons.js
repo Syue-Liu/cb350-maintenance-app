@@ -10,7 +10,8 @@
     sparkPlug: '<path d="M10 3h4v5l2 2-5 5-2-2 3-3V8h-2z"/><path d="M9 13l-4 4M6 16l2 2M4 18l2 2"/>',
     valveClearance: '<path d="M6 5h12M8 5v5l4 3 4-3V5"/><path d="M7 19h10M9 19v-5M15 19v-5"/>',
     chain: '<path d="M8.5 8.5 6.8 6.8a3 3 0 0 0-4.2 4.2l2.2 2.2A3 3 0 0 0 9 13"/><path d="m15.5 15.5 1.7 1.7a3 3 0 0 0 4.2-4.2l-2.2-2.2A3 3 0 0 0 15 11"/><path d="m8 16 8-8"/>',
-    chainSlider: '<path d="M5 8.5h7.5a3.5 3.5 0 0 1 0 7H8"/><path d="M8 15.5 5.5 18H3l2.5-2.5L3 13h2.5L8 15.5Z"/><circle cx="6" cy="8.5" r="1.5"/><circle cx="15.5" cy="12" r="1.5"/><path d="M17 9.5h3v5h-3"/>',
+    /* Centered chain + slider rail, balanced around the 12/12 viewBox center. */
+    chainSlider: '<circle cx="7.5" cy="10" r="2"/><circle cx="16.5" cy="10" r="2"/><path d="M9.5 10h5"/><path d="M5.5 15.5h13"/><path d="M7 15.5l2-2h6l2 2"/><path d="M8 18h8"/>',
     clutch: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="3"/><path d="M12 5v3M12 16v3M5 12h3M16 12h3"/>',
     brakeFluid: '<path d="M6 8h12v10H6z"/><path d="M8 8V5h8v3"/><path d="M12 11c-1.2 1.5-2 2.7-2 3.5a2 2 0 0 0 4 0c0-.8-.8-2-2-3.5z"/>',
     brakePads: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="3"/><path d="M5 8 3 6M19 8l2-2M5 16l-2 2M19 16l2 2"/>',
@@ -19,13 +20,14 @@
     tires: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3"/>',
     general: '<path d="M14 6a4 4 0 0 0-5 5L4 16l4 4 5-5a4 4 0 0 0 5-5l-3 3-3-3z"/>',
     majorService: '<path d="M7 4v4M17 4v4M4 10h16v10H4z"/><path d="M8 14h2M14 14h2M8 17h2M14 17h2"/>',
-    calendar: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 9h16M8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01M16 17h.01"/>',
-    speedometer: '<path d="M5 17a7 7 0 1 1 14 0"/><path d="M12 12l4-3M7 13h.01M12 8h.01M17 13h.01"/>',
+    calendar: '<rect x="4.5" y="5.5" width="15" height="14" rx="2"/><path d="M8 3.5v4M16 3.5v4M4.5 9.5h15M8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01M16 17h.01"/>',
+    /* Full circular gauge reads centered much better than the previous floating arc. */
+    speedometer: '<circle cx="12" cy="12" r="7.5"/><path d="M12 12l3.7-3.1"/><circle cx="12" cy="12" r="1"/><path d="M8 16h8M7.5 9.5h.01M12 7h.01M16.5 9.5h.01"/>',
     bell: '<path d="M6 16h12l-1.5-2v-3.5a4.5 4.5 0 0 0-9 0V14L6 16Z"/><path d="M10 19h4"/>',
     plus: '<circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/>',
     clock: '<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',
     money: '<circle cx="12" cy="12" r="8"/><path d="M15 9.5c-.6-1-1.6-1.5-3-1.5-1.7 0-3 .8-3 2s1 1.7 3 2c2 .3 3 1 3 2.1S13.7 16 12 16c-1.5 0-2.6-.5-3.2-1.6M12 6v12"/>',
-    schedule: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 9h16M8 13h2M14 13h2M8 17h2M14 17h2"/>',
+    schedule: '<rect x="4.5" y="5.5" width="15" height="14" rx="2"/><path d="M8 3.5v4M16 3.5v4M4.5 9.5h15M8 13h2M14 13h2M8 17h2M14 17h2"/>',
   };
 
   const fallback = '<circle cx="12" cy="12" r="7"/><path d="M12 8v5M12 16h.01"/>';
