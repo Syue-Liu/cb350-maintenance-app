@@ -1,12 +1,14 @@
-const CACHE_NAME = "cb350-maintenance-v7";
+const CACHE_NAME = "cb350-maintenance-v8";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./mobile-fixes.css",
+  "./maintenance-icons.css",
   "./maintenance-items.js",
   "./parser.js",
   "./app.js",
+  "./maintenance-icons.js",
   "./navigation-fixes.js",
   "./manifest.webmanifest",
   "./icons/icon.svg",
