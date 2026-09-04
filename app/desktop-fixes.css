@@ -1,0 +1,142 @@
+/* Desktop/tablet layout corrections. Mobile behavior stays unchanged. */
+@media (min-width: 760px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .masthead {
+    min-height: 150px;
+  }
+
+  .shell,
+  .tabbar {
+    width: min(1040px, 100%);
+  }
+
+  .shell {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  /* The bike summary belongs to the home/reminders tab on desktop too. */
+  body.secondary-tab .odometer,
+  body.secondary-tab .dashboard,
+  body.secondary-tab .status-strip {
+    display: none !important;
+  }
+
+  body.secondary-tab .masthead {
+    display: flex !important;
+  }
+
+  body.secondary-tab .shell {
+    padding-top: 0;
+  }
+
+  body.secondary-tab .view.is-active {
+    padding-top: 28px;
+  }
+
+  /* Keep mileage and its unit visually together. */
+  .odo-readout {
+    justify-content: flex-start;
+  }
+
+  .odo-readout input {
+    width: min(560px, calc(100% - 56px));
+    flex: 0 1 560px;
+    font-size: clamp(56px, 6vw, 76px);
+  }
+
+  .odo-unit {
+    font-size: 22px;
+  }
+
+  .odo-footer {
+    max-width: 760px;
+  }
+
+  /* A 4-column dashboard is too narrow for Chinese labels. Use a stable 2 x 2 layout. */
+  .dashboard {
+    grid-template-columns: minmax(300px, 0.95fr) minmax(420px, 1.3fr);
+    gap: 14px;
+  }
+
+  .dash-grid {
+    grid-template-columns: repeat(2, minmax(190px, 1fr));
+    gap: 12px;
+  }
+
+  .dash-card {
+    min-height: 132px;
+    padding: 16px 18px;
+    overflow: hidden;
+  }
+
+  .dash-card span,
+  .dash-card strong,
+  .dash-card small {
+    word-break: keep-all;
+    overflow-wrap: normal;
+  }
+
+  .dash-card strong {
+    font-size: clamp(22px, 2.2vw, 30px);
+  }
+
+  .dash-card > .maintenance-icon--dash {
+    right: 16px;
+    top: 16px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .dash-card > .maintenance-icon--dash svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .dash-card > .maintenance-icon--dash + span,
+  .dash-card > .maintenance-icon--dash ~ strong,
+  .dash-card > .maintenance-icon--dash ~ small {
+    max-width: calc(100% - 54px);
+  }
+
+  /* Desktop nav remains compact and does not overlap page content. */
+  .tabbar {
+    position: static;
+    margin: 0 auto;
+    padding-left: 32px;
+    padding-right: 32px;
+    grid-template-columns: repeat(5, max-content);
+    justify-content: start;
+    gap: 6px;
+  }
+
+  .tab {
+    min-width: 72px;
+    padding: 10px 14px 12px;
+  }
+
+  .tab-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .maintenance-icon--quick,
+  .maintenance-icon--history,
+  .maintenance-icon--schedule {
+    flex: none;
+  }
+}
+
+@media (min-width: 1180px) {
+  .shell,
+  .tabbar {
+    width: min(1120px, 100%);
+  }
+
+  .dashboard {
+    grid-template-columns: minmax(330px, 0.9fr) minmax(500px, 1.35fr);
+  }
+}
