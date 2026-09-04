@@ -94,6 +94,7 @@
   transform: translateY(-50%);
 }
 
+/* Keep dashboard icons pinned to the same top-right point on every card. */
 .dash-card {
   position: relative;
   padding-right: 76px;
@@ -102,22 +103,22 @@
 
 .dash-card > .maintenance-icon--dash {
   position: absolute;
-  right: 18px;
-  top: 50%;
-  width: 48px;
-  height: 48px;
-  transform: translateY(-50%);
+  right: 16px;
+  top: 16px;
+  width: 46px;
+  height: 46px;
+  transform: none;
 }
 
 .dash-card > .maintenance-icon--dash svg {
-  width: 27px;
-  height: 27px;
+  width: 26px;
+  height: 26px;
 }
 
 .dash-card > .maintenance-icon--dash + span,
 .dash-card > .maintenance-icon--dash ~ strong,
 .dash-card > .maintenance-icon--dash ~ small {
-  max-width: 100%;
+  max-width: calc(100% - 58px);
 }
 
 .status-strip {
@@ -168,6 +169,31 @@
   color: var(--honda);
 }
 
+@media (min-width: 760px) {
+  .dash-card {
+    padding-right: 66px;
+  }
+
+  .dash-card > .maintenance-icon--dash {
+    right: 16px;
+    top: 16px;
+    width: 38px;
+    height: 38px;
+    transform: none;
+  }
+
+  .dash-card > .maintenance-icon--dash svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .dash-card > .maintenance-icon--dash + span,
+  .dash-card > .maintenance-icon--dash ~ strong,
+  .dash-card > .maintenance-icon--dash ~ small {
+    max-width: calc(100% - 50px);
+  }
+}
+
 @media (max-width: 520px) {
   .maintenance-icon {
     width: 46px;
@@ -190,8 +216,10 @@
 
   .dash-card > .maintenance-icon--dash {
     right: 16px;
+    top: 16px;
     width: 46px;
     height: 46px;
+    transform: none;
   }
 
   .tab {
