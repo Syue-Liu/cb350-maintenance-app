@@ -13,6 +13,7 @@
 }
 
 .maintenance-icon svg {
+  display: block;
   width: 25px;
   height: 25px;
   fill: none;
@@ -38,6 +39,7 @@
   height: 17px;
 }
 
+/* Reminder cards: keep the icon optically centered regardless of card height. */
 .reminder {
   position: relative;
   padding-left: 70px;
@@ -46,7 +48,10 @@
 .reminder > .maintenance-icon--card {
   position: absolute;
   left: 14px;
-  top: 16px;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translateY(-50%);
 }
 
 .reminder.due > .maintenance-icon--card,
@@ -66,6 +71,7 @@
   color: var(--ok);
 }
 
+/* History rows: vertically center the icon instead of tying it to the first text line. */
 .visit-item {
   position: relative;
   padding-left: 64px;
@@ -74,9 +80,10 @@
 .visit-item > .maintenance-icon--history {
   position: absolute;
   left: 12px;
-  top: 12px;
+  top: 50%;
   width: 38px;
   height: 38px;
+  transform: translateY(-50%);
 }
 
 .schedule-row {
@@ -94,17 +101,25 @@
   transform: translateY(-50%);
 }
 
-/* Keep dashboard icons pinned to the same top-right point on every card. */
+/* Dashboard cards: use a real two-column grid so icons stay centered on every screen size. */
 .dash-card {
   position: relative;
-  padding-right: 76px;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  column-gap: 14px;
+  align-content: center;
   min-height: 126px;
+  padding: 16px 18px;
+  text-align: left;
 }
 
 .dash-card > .maintenance-icon--dash {
-  position: absolute;
-  right: 16px;
-  top: 16px;
+  position: static;
+  grid-column: 1;
+  grid-row: 1 / span 3;
+  align-self: center;
+  justify-self: center;
   width: 46px;
   height: 46px;
   transform: none;
@@ -115,10 +130,27 @@
   height: 26px;
 }
 
-.dash-card > .maintenance-icon--dash + span,
-.dash-card > .maintenance-icon--dash ~ strong,
-.dash-card > .maintenance-icon--dash ~ small {
-  max-width: calc(100% - 58px);
+.dash-card > span:not(.maintenance-icon),
+.dash-card > strong,
+.dash-card > small {
+  grid-column: 2;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+}
+
+.dash-card > span:not(.maintenance-icon) {
+  grid-row: 1;
+  align-self: end;
+}
+
+.dash-card > strong {
+  grid-row: 2;
+}
+
+.dash-card > small {
+  grid-row: 3;
+  align-self: start;
 }
 
 .status-strip {
@@ -171,15 +203,15 @@
 
 @media (min-width: 760px) {
   .dash-card {
-    padding-right: 66px;
+    grid-template-columns: 44px minmax(0, 1fr);
+    column-gap: 12px;
+    min-height: 132px;
+    padding: 16px 18px;
   }
 
   .dash-card > .maintenance-icon--dash {
-    right: 16px;
-    top: 16px;
     width: 38px;
     height: 38px;
-    transform: none;
   }
 
   .dash-card > .maintenance-icon--dash svg {
@@ -187,10 +219,8 @@
     height: 21px;
   }
 
-  .dash-card > .maintenance-icon--dash + span,
-  .dash-card > .maintenance-icon--dash ~ strong,
-  .dash-card > .maintenance-icon--dash ~ small {
-    max-width: calc(100% - 50px);
+  .reminder > .maintenance-icon--card {
+    left: 16px;
   }
 }
 
@@ -209,17 +239,22 @@
     padding-left: 72px;
   }
 
+  .reminder > .maintenance-icon--card {
+    left: 14px;
+    width: 46px;
+    height: 46px;
+  }
+
   .dash-card {
+    grid-template-columns: 52px minmax(0, 1fr);
+    column-gap: 14px;
     min-height: 118px;
-    padding-right: 72px;
+    padding: 15px 16px;
   }
 
   .dash-card > .maintenance-icon--dash {
-    right: 16px;
-    top: 16px;
     width: 46px;
     height: 46px;
-    transform: none;
   }
 
   .tab {
