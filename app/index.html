@@ -12,6 +12,7 @@
     <title>CB350 RS 保養手冊</title>
     <link rel="stylesheet" href="./styles.css" />
     <link rel="stylesheet" href="./mobile-fixes.css" />
+    <link rel="stylesheet" href="./maintenance-icons.css" />
   </head>
   <body>
     <header class="masthead">
@@ -35,6 +36,6 @@
     </main>
     <p class="toast" id="toast" role="status" aria-live="polite" hidden></p>
     <nav class="tabbar" role="tablist" aria-label="主要分頁"><button class="tab is-active" id="tab-reminders" data-tab="reminders" role="tab" aria-selected="true" aria-controls="reminders" type="button"><span class="tab-dot" id="tabBadge" hidden></span>提醒</button><button class="tab" id="tab-compose" data-tab="compose" role="tab" aria-selected="false" aria-controls="compose" type="button">新增</button><button class="tab" id="tab-history" data-tab="history" role="tab" aria-selected="false" aria-controls="history" type="button">歷史</button><button class="tab" id="tab-spending" data-tab="spending" role="tab" aria-selected="false" aria-controls="spending" type="button">花費</button><button class="tab" id="tab-schedule" data-tab="schedule" role="tab" aria-selected="false" aria-controls="schedule" type="button">週期</button></nav>
-    <script src="./maintenance-items.js"></script><script src="./parser.js"></script><script src="./app.js"></script><script src="./navigation-fixes.js"></script><script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {})); }</script>
+    <script src="./maintenance-items.js"></script><script src="./parser.js"></script><script src="./app.js"></script><script src="./maintenance-icons.js"></script><script src="./navigation-fixes.js"></script><script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {})); }</script>
   </body>
 </html>
