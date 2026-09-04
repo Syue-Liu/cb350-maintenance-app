@@ -1,4 +1,4 @@
-const CACHE_NAME = "cb350-maintenance-v12";
+const CACHE_NAME = "cb350-maintenance-v13";
 const APP_SHELL = [
   "./",
   "./index.html",
