@@ -12,11 +12,25 @@
     { key: "fluid", title: "煞車油", detail: "目視油量、顏色與是否滲漏；正式更換仍依 2 年週期。" },
   ];
 
+  function ensureStylesheet() {
+    if (document.querySelector('link[data-small-service-style]')) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "./small-service.css";
+    link.dataset.smallServiceStyle = "true";
+    document.head.appendChild(link);
+  }
+
+  ensureStylesheet();
+
   const mileageInput = document.querySelector("#currentMileage");
   const bikeForm = document.querySelector("#bikeForm");
   const schedule = document.querySelector("#schedule");
   const scheduleList = document.querySelector("#scheduleList");
   if (!schedule || !scheduleList) return;
+
+  const title = schedule.querySelector(".view-head h2");
+  if (title) title.textContent = "保養週期";
 
   function number(value) {
     return Number(value).toLocaleString("zh-TW");
