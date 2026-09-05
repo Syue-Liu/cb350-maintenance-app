@@ -2,6 +2,7 @@
  * - keep a separate scroll position for each tab
  * - show bike summary only on the home/reminders tab
  * - allow horizontal swipe between the five bottom tabs
+ * - show today's inspection date on the home screen without persisting it until Update is pressed
  */
 (() => {
   const TAB_ORDER = ["reminders", "compose", "history", "spending", "schedule"];
@@ -12,6 +13,28 @@
   let touchStartX = 0;
   let touchStartY = 0;
   let touchStartTime = 0;
+  let inspectionDateTouched = false;
+
+  function todayInputValue() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  function refreshInspectionDate({ force = false } = {}) {
+    const input = document.getElementById("currentDate");
+    if (!input || (!force && inspectionDateTouched)) return;
+    input.value = todayInputValue();
+  }
+
+  const inspectionInput = document.getElementById("currentDate");
+  if (inspectionInput) {
+    inspectionInput.addEventListener("input", () => {
+      inspectionDateTouched = true;
+    });
+  }
 
   function setPageMode(tabId) {
     const isHome = tabId === "reminders";
@@ -32,6 +55,12 @@
     });
     activeTab = tabId;
     setPageMode(tabId);
+
+    if (tabId === "reminders") {
+      inspectionDateTouched = false;
+      refreshInspectionDate({ force: true });
+    }
+
     const destinationY = scrollPositions[tabId] || 0;
     requestAnimationFrame(() => window.scrollTo({ top: destinationY, left: 0, behavior: "auto" }));
   };
@@ -64,5 +93,23 @@
     window.switchTab(TAB_ORDER[nextIndex]);
   }, { passive: true });
 
+  window.addEventListener("pageshow", () => {
+    if (activeTab === "reminders") {
+      inspectionDateTouched = false;
+      refreshInspectionDate({ force: true });
+    }
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && activeTab === "reminders") {
+      inspectionDateTouched = false;
+      refreshInspectionDate({ force: true });
+    }
+  });
+
   setPageMode(activeTab);
+  refreshInspectionDate({ force: true });
+  // Cloud sync may finish shortly after app startup and restore the last saved baseline date.
+  // Reapply today's UI value once, without changing the stored baseline date.
+  window.addEventListener("load", () => setTimeout(() => refreshInspectionDate(), 1200));
 })();
