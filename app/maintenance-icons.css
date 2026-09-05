@@ -39,7 +39,6 @@
   height: 17px;
 }
 
-/* Reminder cards: keep the icon optically centered regardless of card height. */
 .reminder {
   position: relative;
   padding-left: 70px;
@@ -71,7 +70,6 @@
   color: var(--ok);
 }
 
-/* History rows: vertically center the icon instead of tying it to the first text line. */
 .visit-item {
   position: relative;
   padding-left: 64px;
@@ -101,7 +99,26 @@
   transform: translateY(-50%);
 }
 
-/* Dashboard cards: use a real two-column grid so icons stay centered on every screen size. */
+.schedule-row.has-major-note {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+.major-service-note {
+  flex: 0 0 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(74, 85, 96, 0.07);
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: normal;
+}
+
+/* Dashboard cards */
 .dash-card {
   position: relative;
   display: grid;
@@ -255,6 +272,11 @@
   .dash-card > .maintenance-icon--dash {
     width: 46px;
     height: 46px;
+  }
+
+  .major-service-note {
+    font-size: 12.5px;
+    line-height: 1.65;
   }
 
   .tab {
