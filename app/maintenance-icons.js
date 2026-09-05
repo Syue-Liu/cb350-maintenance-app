@@ -10,7 +10,6 @@
     sparkPlug: '<path d="M10 3h4v5l2 2-5 5-2-2 3-3V8h-2z"/><path d="M9 13l-4 4M6 16l2 2M4 18l2 2"/>',
     valveClearance: '<path d="M6 5h12M8 5v5l4 3 4-3V5"/><path d="M7 19h10M9 19v-5M15 19v-5"/>',
     chain: '<path d="M8.5 8.5 6.8 6.8a3 3 0 0 0-4.2 4.2l2.2 2.2A3 3 0 0 0 9 13"/><path d="m15.5 15.5 1.7 1.7a3 3 0 0 0 4.2-4.2l-2.2-2.2A3 3 0 0 0 15 11"/><path d="m8 16 8-8"/>',
-    /* Centered chain + slider rail, balanced around the 12/12 viewBox center. */
     chainSlider: '<circle cx="7.5" cy="10" r="2"/><circle cx="16.5" cy="10" r="2"/><path d="M9.5 10h5"/><path d="M5.5 15.5h13"/><path d="M7 15.5l2-2h6l2 2"/><path d="M8 18h8"/>',
     clutch: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="3"/><path d="M12 5v3M12 16v3M5 12h3M16 12h3"/>',
     brakeFluid: '<path d="M6 8h12v10H6z"/><path d="M8 8V5h8v3"/><path d="M12 11c-1.2 1.5-2 2.7-2 3.5a2 2 0 0 0 4 0c0-.8-.8-2-2-3.5z"/>',
@@ -21,7 +20,6 @@
     general: '<path d="M14 6a4 4 0 0 0-5 5L4 16l4 4 5-5a4 4 0 0 0 5-5l-3 3-3-3z"/>',
     majorService: '<path d="M7 4v4M17 4v4M4 10h16v10H4z"/><path d="M8 14h2M14 14h2M8 17h2M14 17h2"/>',
     calendar: '<rect x="4.5" y="5.5" width="15" height="14" rx="2"/><path d="M8 3.5v4M16 3.5v4M4.5 9.5h15M8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01M16 17h.01"/>',
-    /* Full circular gauge reads centered much better than the previous floating arc. */
     speedometer: '<circle cx="12" cy="12" r="7.5"/><path d="M12 12l3.7-3.1"/><circle cx="12" cy="12" r="1"/><path d="M8 16h8M7.5 9.5h.01M12 7h.01M16.5 9.5h.01"/>',
     bell: '<path d="M6 16h12l-1.5-2v-3.5a4.5 4.5 0 0 0-9 0V14L6 16Z"/><path d="M10 19h4"/>',
     plus: '<circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/>',
@@ -82,6 +80,20 @@
     });
   }
 
+  function decorateMajorServiceNotes() {
+    const item = items.find((entry) => entry.key === 'majorService');
+    if (!item) return;
+    document.querySelectorAll('.schedule-row').forEach((row) => {
+      const name = row.querySelector('.schedule-name')?.textContent?.trim();
+      if (name !== item.name || row.querySelector('.major-service-note')) return;
+      row.classList.add('has-major-note');
+      const note = document.createElement('span');
+      note.className = 'major-service-note';
+      note.textContent = item.note.replace(/^每 20,000 km 交由店家處理：\s*/, '保養項目：');
+      row.append(note);
+    });
+  }
+
   function decorateDashboard() {
     document.querySelectorAll('.dash-card').forEach((card) => {
       if (card.querySelector('.maintenance-icon')) return;
@@ -121,6 +133,7 @@
     decorateReminders();
     decorateHistory();
     decorateSchedule();
+    decorateMajorServiceNotes();
     decorateDashboard();
     decorateStatusStrip();
     decorateTabs();
