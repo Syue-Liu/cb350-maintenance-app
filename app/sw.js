@@ -1,4 +1,4 @@
-const CACHE_NAME = "cb350-maintenance-v15";
+const CACHE_NAME = "cb350-maintenance-v16";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,11 +6,13 @@ const APP_SHELL = [
   "./mobile-fixes.css",
   "./maintenance-icons.css",
   "./desktop-fixes.css",
+  "./small-service.css",
   "./maintenance-items.js",
   "./parser.js",
   "./app.js",
   "./maintenance-icons.js",
   "./navigation-fixes.js",
+  "./small-service.js",
   "./manifest.webmanifest",
   "./icons/icon.svg",
   "./assets/cb350-rs-banner.webp",
