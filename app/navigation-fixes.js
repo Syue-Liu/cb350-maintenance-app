@@ -29,6 +29,14 @@
     input.value = todayInputValue();
   }
 
+  function loadMinorServiceChecklist() {
+    if (document.querySelector('script[data-small-service]')) return;
+    const script = document.createElement("script");
+    script.src = "./small-service.js";
+    script.dataset.smallService = "true";
+    document.body.appendChild(script);
+  }
+
   const inspectionInput = document.getElementById("currentDate");
   if (inspectionInput) {
     inspectionInput.addEventListener("input", () => {
@@ -109,6 +117,7 @@
 
   setPageMode(activeTab);
   refreshInspectionDate({ force: true });
+  loadMinorServiceChecklist();
   // Cloud sync may finish shortly after app startup and restore the last saved baseline date.
   // Reapply today's UI value once, without changing the stored baseline date.
   window.addEventListener("load", () => setTimeout(() => refreshInspectionDate(), 1200));
