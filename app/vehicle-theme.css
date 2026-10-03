@@ -1,0 +1,61 @@
+/* Keep the existing handbook layout; vehicle accents are deliberately scoped. */
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.masthead { min-height: 190px; align-items: center; }
+.masthead-copy { position: relative; z-index: 1; min-width: 0; }
+.masthead h1 { font-size: 25px; margin-top: 5px; letter-spacing: 0; }
+.mark { letter-spacing: 0; }
+.vehicle-caption { font-size: 12px; opacity: .8; margin-top: 4px; }
+.vehicle-picker { display: block; margin-top: 14px; max-width: 265px; }
+.vehicle-picker select { width: 100%; min-height: 40px; padding: 8px 30px 8px 10px; font-size: 14px; border: 1px solid #ffffff70; border-radius: 6px; color: #fff; background: #111111bb; }
+.vehicle-picker option { background: var(--card); color: var(--ink); }
+.ezzy-header-image { display: none; }
+.masthead .icon-btn { position: relative; z-index: 2; }
+.schedule-source { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--ink-2); font-size: 14px; }
+.schedule-source a { display: block; margin-top: 6px; color: var(--honda); }
+.asset-credit { margin-top: 12px; font-size: 11px; color: var(--ink-3); }
+#deliveryForm .field-row { margin-bottom: 14px; }
+.reminder.unknown { border-color: var(--line-strong); }
+.reminder-meta b { font-size: 18px; }
+.odo-readout input { font-size: 60px; letter-spacing: 0; }
+.dash-hero strong { font-size: 46px; letter-spacing: 0; }
+.dash-card strong { font-size: 24px; letter-spacing: 0; }
+.field input[type="date"] { min-height: 46px; height: 46px; text-align: center; padding-block: 0; line-height: 44px; }
+.field input[type="date"]::-webkit-date-and-time-value { display: block; text-align: center; line-height: 44px; margin: 0; padding: 0; }
+.field input[type="date"]::-webkit-datetime-edit { padding: 0; }
+body[data-vehicle="gogoro"] { --honda: #ae2833; --focus: #326b83; }
+body[data-vehicle="gogoro"] .masthead { background: #f2e4bd; color: #262728; border-bottom: 4px solid #ad303c; }
+body[data-vehicle="gogoro"] .masthead::after { display: none; }
+body[data-vehicle="gogoro"] .mark { color: #735620; }
+body[data-vehicle="gogoro"] .vehicle-caption { color: #855321; opacity: 1; }
+body[data-vehicle="gogoro"] .vehicle-picker select { background: #fffaf0; color: #222; border-color: #c5ae7f; }
+body[data-vehicle="gogoro"] .ezzy-header-image { display: block; position: absolute; height: 185px; width: 185px; object-fit: contain; left: 50%; top: 0; }
+body[data-vehicle="gogoro"] .icon-btn { color: #855321; border-color: #c5ae7f; background: #fffaf0; }
+body[data-vehicle="gogoro"] .dash-hero { background: #edf1ed; color: #262728; }
+body[data-vehicle="gogoro"] .dash-date { color: #526366; }
+body[data-vehicle="gogoro"] .dash-hero::after { background: #cf9c33; }
+@media (min-width: 760px) {
+  .masthead { padding-inline: max(32px, calc((100% - 1056px) / 2)); }
+  body[data-vehicle="gogoro"] .ezzy-header-image { width: 280px; height: 190px; left: calc(50% + 20px); }
+}
+@media (max-width: 759px) {
+  body.secondary-tab .masthead { display: flex; min-height: 146px; padding-top: max(14px, env(safe-area-inset-top)); padding-bottom: 14px; }
+  body.secondary-tab .vehicle-caption { display: none; }
+  body.secondary-tab .ezzy-header-image { height: 130px; width: 130px; left: auto; right: 40px; }
+  .masthead { padding-inline: 16px; align-items: flex-start; }
+  .masthead .icon-btn { width: 36px; height: 36px; }
+  .vehicle-picker { width: 244px; max-width: calc(100vw - 72px); }
+  body[data-vehicle="gogoro"] .ezzy-header-image { width: 146px; height: 146px; top: 4px; left: auto; right: 24px; }
+  .vehicle-picker { margin-top: 30px; }
+  .masthead h1 { font-size: 23px; }
+  .odo-label { text-align: center; }
+  .odo-readout { justify-content: center; align-items: center; min-height: 64px; }
+  .odo-readout input { width: 220px; max-width: calc(100% - 50px); font-size: 52px; line-height: 64px; height: 64px; text-align: center; }
+  .odo-footer .field > span { text-align: center; }
+  .dash-hero strong { font-size: 38px; }
+  .dash-card strong { font-size: 24px; }
+}
+@media (max-width: 359px) {
+  body[data-vehicle="gogoro"] .ezzy-header-image { width: 108px; height: 108px; top: 20px; right: 8px; }
+  .mark { font-size: 11px; }
+}

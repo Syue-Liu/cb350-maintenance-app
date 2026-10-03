@@ -1,4 +1,8 @@
-const { MAINTENANCE_ITEMS, CATEGORIES } = CB350Data;
+const { profiles: VEHICLES, hasMileage } = VehicleProfiles;
+let vehicleId = readSaved("maintenance-selected-vehicle", "honda");
+if (!VEHICLES[vehicleId]) vehicleId = "honda";
+let MAINTENANCE_ITEMS = VEHICLES[vehicleId].items;
+let CATEGORIES = VEHICLES[vehicleId].categories;
 const {
   parseMaintenanceText,
   findLatestRecord,
@@ -10,15 +14,17 @@ const {
 
 const MAJOR_SERVICE_KM = 20000;
 const MINOR_SERVICE_KM = 6000;
-const STORAGE_KEY = "cb350-maintenance-app-v1";
 const TOAST_MS = 4000;
 const SOON_KM = 300;
 const SOON_DAYS = 30;
 
-const ITEM_BY_KEY = new Map(MAINTENANCE_ITEMS.map((item) => [item.key, item]));
-const CATEGORY_BY_KEY = new Map(CATEGORIES.map((category) => [category.key, category]));
+let ITEM_BY_KEY = new Map(MAINTENANCE_ITEMS.map((item) => [item.key, item]));
+let CATEGORY_BY_KEY = new Map(CATEGORIES.map((category) => [category.key, category]));
 
-const state = loadState();
+const vehicles = Object.fromEntries(Object.keys(VEHICLES).map(id => [id, VehicleProfiles.normalize(readSaved(VEHICLES[id].storageKey, null))]));
+let state = vehicles[vehicleId];
+let sharedSyncKey = readSaved("maintenance-shared-sync-key", vehicles.honda.settings.syncKey || "");
+const syncStatusByVehicle = {};
 
 const els = {};
 [
@@ -31,19 +37,43 @@ const els = {};
   "spendSummary", "spendByItem", "spendByYear",
   "syncKey", "syncStatus", "syncTestButton", "syncDiag",
   "exportButton", "clearButton", "settingsButton", "closeSettingsButton",
-  "toast", "tabBadge",
+  "toast", "tabBadge", "vehicleSelect", "vehicleMark", "vehicleCaption", "deliveryForm", "deliveryDate", "deliveryMileage", "deliveryBlock",
 ].forEach((id) => {
   els[id] = document.querySelector(`#${id}`);
 });
 
 let toastTimer = 0;
+let formDirty = false;
+const syncVehicle = VehicleSync.createSync({
+  vehicles,
+  getConfig: () => ({ key: sharedSyncKey, endpoint: defaultSyncEndpoint() }),
+  save: (id) => saveVehicle(id),
+  changed: (id) => {
+    if (id !== vehicleId) return;
+    if (!els.bikeForm.contains(document.activeElement)) {
+      els.currentMileage.value = state.settings.currentMileage;
+      els.currentDate.value = VehicleProfiles.today();
+    }
+    if (!formDirty) resetAddForm();
+    if (!els.deliveryForm.contains(document.activeElement)) fillDeliveryFields();
+    render();
+    document.dispatchEvent(new Event("vehiclechange"));
+  },
+  status: (id, text, kind) => { syncStatusByVehicle[id] = [text, kind]; if (id === vehicleId) setSyncStatus(text, kind); },
+});
 
 init();
 
 function init() {
-  els.currentMileage.value = state.settings.currentMileage || "";
+  els.currentMileage.value = state.settings.currentMileage;
   els.currentDate.value = state.settings.currentDate || toDateInput(new Date());
-  els.syncKey.value = state.settings.syncKey || "";
+  els.syncKey.value = sharedSyncKey;
+  applyVehicle();
+  els.vehicleSelect.addEventListener("change", switchVehicle);
+  els.deliveryForm.addEventListener("submit", saveDelivery);
+  els.addForm.addEventListener("input", () => { formDirty = true; });
+  els.addForm.addEventListener("change", () => { formDirty = true; });
+  els.chatText.addEventListener("input", () => { formDirty = true; });
 
   // 端點沒有 UI 可以修改，每次載入都重算，避免 localStorage 留著舊網域的值。
   state.settings.syncEndpoint = defaultSyncEndpoint();
@@ -75,44 +105,88 @@ function init() {
   updateSyncStatus();
   render();
   downloadCloudData({ silent: true });
+  const refresh = () => { if (!document.hidden) Object.keys(vehicles).forEach(id => syncVehicle(id)); };
+  window.addEventListener("focus", refresh);
+  window.addEventListener("online", refresh);
+  document.addEventListener("visibilitychange", refresh);
+  setInterval(refresh, 60000);
 }
 
 /* ------------------------------------------------------------------ 狀態 */
 
-function loadState() {
-  const fallback = {
-    settings: {
-      currentMileage: "",
-      currentDate: toDateInput(new Date()),
-      syncEndpoint: "",
-      syncKey: "",
-      lastCloudSyncAt: "",
-      showAllReminders: false,
-    },
-    records: [],
-  };
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (!saved) return fallback;
-    return { settings: { ...fallback.settings, ...saved.settings }, records: saved.records || [] };
-  } catch {
-    return fallback;
-  }
+function readSaved(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
 }
 
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function saveVehicle(id) {
+  localStorage.setItem(VEHICLES[id].storageKey, JSON.stringify(vehicles[id]));
 }
+function saveState() { saveVehicle(vehicleId); }
 
 function saveStateAndSync() {
+  state.dirty = true;
+  state.revision += 1;
   saveState();
   uploadCloudData({ silent: true });
 }
 
+function applyVehicle() {
+  document.body.dataset.vehicle = vehicleId;
+  document.title = `${VEHICLES[vehicleId].name} 保養手冊`;
+  els.vehicleSelect.value = vehicleId;
+  els.vehicleMark.textContent = VEHICLES[vehicleId].name;
+  els.vehicleCaption.textContent = vehicleId === "gogoro" ? "歡樂牛仔號 · Jessie" : "RED · 騎乘日誌";
+  els.deliveryBlock.hidden = vehicleId !== "gogoro";
+  els.addBrand.placeholder = vehicleId === "gogoro" ? "廠牌或零件規格" : "例如 Motul 10W-40";
+  els.chatText.placeholder = vehicleId === "gogoro" ? "今天里程 5000，定期保養，費用 800 元" : "今天里程 12850，換機油、清潔鏈條，費用 950 元";
+  fillDeliveryFields();
+}
+
+function fillDeliveryFields() {
+  els.deliveryDate.value = state.settings.deliveryDate || "";
+  els.deliveryMileage.value = state.settings.deliveryMileage ?? 0;
+}
+
+function switchVehicle() {
+  const nextId = els.vehicleSelect.value;
+  if (formDirty && !confirm("還有未儲存的內容，切換車輛會捨棄這次填寫。確定切換嗎？")) { els.vehicleSelect.value = vehicleId; return; }
+  vehicleId = nextId;
+  localStorage.setItem("maintenance-selected-vehicle", JSON.stringify(vehicleId));
+  state = vehicles[vehicleId];
+  MAINTENANCE_ITEMS = VEHICLES[vehicleId].items;
+  CATEGORIES = VEHICLES[vehicleId].categories;
+  ITEM_BY_KEY = new Map(MAINTENANCE_ITEMS.map(item => [item.key,item]));
+  CATEGORY_BY_KEY = new Map(CATEGORIES.map(category => [category.key,category]));
+  els.currentMileage.value = state.settings.currentMileage;
+  els.currentDate.value = VehicleProfiles.today();
+  els.chatText.value = "";
+  els.historySearch.value = "";
+  els.historyFilter.value = "all";
+  applyVehicle(); buildItemSelect(); buildQuickRow(); resetAddForm(); render(); updateSyncStatus();
+  switchTab("reminders");
+  document.dispatchEvent(new Event("vehiclechange"));
+  syncVehicle(vehicleId);
+}
+
+function saveDelivery(event) {
+  event.preventDefault();
+  const mileage = els.deliveryMileage.value;
+  if (!els.deliveryDate.value || !hasMileage(mileage)) return;
+  if (els.deliveryDate.value > VehicleProfiles.today() || (hasMileage(state.settings.currentMileage) && Number(mileage) > Number(state.settings.currentMileage))) {
+    setToast("請確認交車日期與里程，交車里程不能大於目前里程。", "warn"); return;
+  }
+  state.settings.deliveryDate = els.deliveryDate.value;
+  state.settings.deliveryMileage = Number(mileage);
+  if (!hasMileage(state.settings.currentMileage)) { state.settings.currentMileage = Number(mileage); els.currentMileage.value = mileage; }
+  state.settingsUpdatedAt = new Date().toISOString();
+  saveStateAndSync(); render(); setToast("已儲存交車資料，首保提醒已開始計算。");
+}
+
 function updateSettings(event) {
   event.preventDefault();
-  state.settings.currentMileage = Number(els.currentMileage.value) || "";
+  state.settings.currentMileage = hasMileage(els.currentMileage.value) ? Number(els.currentMileage.value) : "";
   state.settings.currentDate = els.currentDate.value || toDateInput(new Date());
+  state.settingsUpdatedAt = new Date().toISOString();
   saveStateAndSync();
   resetAddForm({ keepItem: true });
   render();
@@ -175,13 +249,14 @@ function prefillSpec(itemKey) {
 }
 
 function resetAddForm({ keepItem = false } = {}) {
+  formDirty = false;
   if (!keepItem) els.addItem.value = MAINTENANCE_ITEMS[0].key;
   syncActionOptions(els.addItem.value);
   els.editRecordId.value = "";
   els.saveRecordButton.textContent = "加入紀錄";
   els.cancelEditButton.hidden = true;
   els.addDate.value = state.settings.currentDate || toDateInput(new Date());
-  els.addMileage.value = state.settings.currentMileage || "";
+  els.addMileage.value = state.settings.currentMileage;
   els.addBrand.value = "";
   els.addCost.value = "";
   els.addNote.value = "";
@@ -195,7 +270,7 @@ function handleManualAdd(event) {
   const editId = els.editRecordId.value;
 
   const mileage = Number(els.addMileage.value) || 0;
-  if (!mileage) {
+  if (!hasMileage(els.addMileage.value)) {
     setToast("里程要填，才能算下一次。", "warn");
     els.addMileage.focus();
     return;
@@ -262,7 +337,7 @@ function handleTextAdd(event) {
   });
 
   if (!parsed.records.length) {
-    setToast("沒抓到保養項目。試試「里程 12850 換機油、清潔鏈條，費用 950」。", "warn");
+    setToast(vehicleId === "gogoro" ? "沒抓到項目。試試「里程 5000 定期保養，費用 800」。" : "沒抓到保養項目。試試「里程 12850 換機油、清潔鏈條，費用 950」。", "warn");
     return;
   }
 
@@ -276,16 +351,18 @@ function handleTextAdd(event) {
   commitRecords(fresh, { mileage: parsed.mileage, date: parsed.date });
   els.chatText.value = "";
   const names = fresh.map((record) => record.item).join("、");
+  formDirty = false;
   setToast(`加入 ${fresh.length} 筆：${names}${skipped ? `（略過 ${skipped} 筆重複）` : ""}`);
   switchTab("reminders");
 }
 
 /** 寫入紀錄，並在里程/日期比現值新時同步更新目前狀態。 */
 function commitRecords(records, { mileage, date }) {
+  state.settingsUpdatedAt = new Date().toISOString();
   state.records.unshift(...records);
 
   const value = Number(mileage) || 0;
-  if (value > (Number(state.settings.currentMileage) || 0)) {
+  if (hasMileage(mileage) && (!hasMileage(state.settings.currentMileage) || value > Number(state.settings.currentMileage))) {
     state.settings.currentMileage = value;
     els.currentMileage.value = value;
   }
@@ -299,7 +376,8 @@ function commitRecords(records, { mileage, date }) {
 }
 
 function fillSample() {
-  els.chatText.value = "今天 里程 12850，換機油 10W-40、清潔潤滑鏈條、檢查煞車皮，費用 950 元";
+  els.chatText.value = vehicleId === "gogoro" ? "今天里程 5000，定期保養，費用 800 元" : "今天 里程 12850，換機油 10W-40、清潔潤滑鏈條、檢查煞車皮，費用 950 元";
+  formDirty = true;
   els.chatText.focus();
 }
 
@@ -320,14 +398,15 @@ function renderDashboard() {
   const reminders = getReminders();
   const due = reminders.filter((item) => item.status === "due");
   const soon = reminders.filter((item) => item.status === "soon");
-  const next = reminders.find((item) => item.status !== "ok") || reminders[0];
-  const nextMinor = currentMileage ? nextCycle(currentMileage, MINOR_SERVICE_KM) : 0;
-  const minorLeft = currentMileage ? Math.max(0, nextMinor - currentMileage) : 0;
+  const next = reminders.find((item) => ["due", "soon"].includes(item.status)) || reminders.find(item => item.status !== "unknown");
+  const regular = reminders.find(item => item.key === "ezzyService");
+  const nextMinor = vehicleId === "gogoro" ? regular.nextKm : currentMileage ? nextCycle(currentMileage, MINOR_SERVICE_KM) : 0;
+  const minorLeft = nextMinor ? Math.max(0, nextMinor - currentMileage) : 0;
 
   els.dashboard.innerHTML = `
     <div class="dash-hero">
       <span class="dash-label">目前里程</span>
-      <strong>${currentMileage ? number(currentMileage) : "未設定"}<small>${currentMileage ? " km" : ""}</small></strong>
+      <strong>${hasMileage(state.settings.currentMileage) ? number(currentMileage) : "未設定"}<small>${hasMileage(state.settings.currentMileage) ? " km" : ""}</small></strong>
       <span class="dash-date">基準日 ${escapeHtml(currentDate)}</span>
     </div>
     <div class="dash-grid">
@@ -342,9 +421,9 @@ function renderDashboard() {
         <small>${next ? stripTags(next.meta).split("，")[0] : "新增紀錄後開始追蹤"}</small>
       </button>
       <button class="dash-card" type="button" data-dash-tab="schedule">
-        <span>距離小保養</span>
-        <strong>${currentMileage ? number(minorLeft) : "--"}<small> km</small></strong>
-        <small>${currentMileage ? `目標 ${formatKm(nextMinor)}` : "先更新目前里程"}</small>
+        <span>${vehicleId === "gogoro" ? "距離定期保養" : "距離小保養"}</span>
+        <strong>${nextMinor && hasMileage(state.settings.currentMileage) ? number(minorLeft) : "--"}<small> km</small></strong>
+        <small>${nextMinor ? `目標 ${formatKm(nextMinor)}${regular?.nextDate ? ` / ${regular.nextDate}` : ""}` : vehicleId === "gogoro" ? "先設定交車日期與里程" : "先更新目前里程"}</small>
       </button>
       <button class="dash-card warm" type="button" data-dash-tab="reminders">
         <span>快到期</span>
@@ -364,11 +443,21 @@ function renderStatusStrip() {
   const soon = reminders.filter((item) => item.status === "soon").length;
   els.tabBadge.hidden = due === 0;
 
-  if (!state.settings.currentMileage) {
+  if (vehicleId === "gogoro" && reminders.some(item => item.status === "unknown")) {
+    els.statusStrip.innerHTML = '尚有項目缺少保養基準。<button class="btn quiet" id="setupDelivery" type="button">設定交車資料</button>';
+    document.getElementById("setupDelivery").addEventListener("click", () => { switchTab("settings"); els.deliveryDate.focus(); });
+    if (!due && !soon) return;
+  }
+  if (!hasMileage(state.settings.currentMileage)) {
     els.statusStrip.innerHTML = "填上目前里程，就會開始幫你算下一次保養。";
     return;
   }
   if (!due && !soon) {
+    if (vehicleId === "gogoro") {
+      const next = reminders.find(item => item.key === "ezzyService");
+      els.statusStrip.innerHTML = `下次定保 <span class="count">${formatKm(next.nextKm)}</span> 或 ${escapeHtml(next.nextDate)}，先到為準。`;
+      return;
+    }
     els.statusStrip.innerHTML = `目前都在週期內，下次小保養 <span class="count">${formatKm(
       nextCycle(Number(state.settings.currentMileage), MINOR_SERVICE_KM),
     )}</span>`;
@@ -383,10 +472,14 @@ function renderStatusStrip() {
 function renderReminders() {
   const reminders = getReminders();
   const showAll = Boolean(state.settings.showAllReminders);
-  const visible = showAll ? reminders : reminders.filter((item) => item.status !== "ok");
+  const visible = showAll ? reminders : reminders.filter((item) => ["due", "soon"].includes(item.status));
   els.toggleRemindersButton.textContent = showAll ? "只看要處理的" : "展開全部";
 
   if (!visible.length) {
+    if (vehicleId === "gogoro" && reminders.some(item => item.status === "unknown")) {
+      els.reminderList.innerHTML = '<div class="empty"><b>等待保養基準</b>設定交車資料，或補上先前的保養紀錄。</div>';
+      return;
+    }
     els.reminderList.innerHTML = `
       <div class="empty">
         <b>沒有到期項目</b>
@@ -474,7 +567,7 @@ function renderVisits() {
         <article class="visit">
           <header class="visit-head">
             <span class="visit-date">${escapeHtml(visit.date || "日期未填")}</span>
-            <span class="visit-odo">${visit.mileage ? formatKm(visit.mileage) : "里程未填"}${
+            <span class="visit-odo">${hasMileage(visit.mileage) ? formatKm(visit.mileage) : "里程未填"}${
               total ? `　NT$ ${number(total)}` : ""
             }</span>
           </header>
@@ -489,6 +582,7 @@ function renderVisits() {
 
   els.visitList.querySelectorAll("[data-delete]").forEach((button) => {
     button.addEventListener("click", () => {
+      state.tombstones[button.dataset.delete] = new Date().toISOString();
       state.records = state.records.filter((record) => record.id !== button.dataset.delete);
       saveStateAndSync();
       render();
@@ -538,12 +632,13 @@ function editRecord(id) {
   syncActionOptions(record.key);
   els.addAction.value = record.action || ITEM_BY_KEY.get(record.key)?.action || "";
   els.addDate.value = record.date || toDateInput(new Date());
-  els.addMileage.value = record.mileage || "";
+  els.addMileage.value = record.mileage ?? "";
   els.addBrand.value = record.brand || "";
   els.addCost.value = record.cost || "";
   els.addNote.value = record.note || "";
   els.saveRecordButton.textContent = "儲存修改";
   els.cancelEditButton.hidden = false;
+  formDirty = true;
   els.addItem.focus();
   setToast("正在編輯這筆保養紀錄。");
 }
@@ -634,7 +729,7 @@ function renderSpending() {
 
 function renderSchedule() {
   const mileage = Number(state.settings.currentMileage) || 0;
-  const milestones = mileage
+  const milestones = mileage && vehicleId === "honda"
     ? `<h3 class="sub-head">接下來</h3>
        <div class="schedule-row">
          <span class="schedule-name">小保養</span>
@@ -664,12 +759,14 @@ function renderSchedule() {
       : "";
   }).join("");
 
-  els.scheduleList.innerHTML = milestones + groups;
+  const sourceNote = vehicleId === "gogoro" ? `<p class="schedule-source">首次及後續每 5,000 km 或 6 個月，先到為準。檢查項目依車況更換；煞車油另依 18,000 km 或 3 年。<a href="${VehicleProfiles.source}" target="_blank" rel="noopener">Gogoro 官方保養表</a></p><p class="asset-credit">車款圖片：Gogoro · © Disney/Pixar</p>` : "";
+  els.scheduleList.innerHTML = milestones + groups + sourceNote;
 }
 
 /* ------------------------------------------------------------------ 提醒計算 */
 
 function getReminders() {
+  if (vehicleId === "gogoro") return VehicleProfiles.ezzyReminders(state).map(item => ({ ...item, meta: item.status === "unknown" ? "等待交車資料或首次保養紀錄" : buildReminderMeta({ ...item, nextDate: item.nextDate ? parseLocalDate(item.nextDate) : null }) })).sort((a,b)=>statusRank(a.status)-statusRank(b.status) || b.progress-a.progress);
   const currentMileage = Number(state.settings.currentMileage) || 0;
   const currentDate = parseLocalDate(state.settings.currentDate || toDateInput(new Date()));
 
@@ -679,7 +776,7 @@ function getReminders() {
     const lastDate = last?.date ? parseLocalDate(last.date) : null;
 
     const nextKm = item.kmInterval
-      ? lastMileage
+      ? last && hasMileage(last.mileage)
         ? lastMileage + item.kmInterval
         : nextCycle(currentMileage, item.kmInterval)
       : 0;
@@ -731,7 +828,7 @@ function completeReminder(key) {
   if (!item) return;
 
   const mileage = Number(state.settings.currentMileage) || 0;
-  if (!mileage) {
+  if (!hasMileage(state.settings.currentMileage)) {
     setToast("先填上目前里程，才能推算下一次。", "warn");
     els.currentMileage.focus();
     return;
@@ -754,94 +851,21 @@ function completeReminder(key) {
 
 function defaultSyncEndpoint() {
   const host = window.location.hostname;
-  if (host === "localhost" || host === "127.0.0.1" || host.endsWith("github.io")) {
+  if (window.location.protocol === "file:" || host === "localhost" || host === "127.0.0.1" || host.endsWith("github.io")) {
     return "https://cb350-maintenance-app.vercel.app/api/sync";
   }
   return `${window.location.origin}/api/sync`;
 }
 
-function cloudPayload() {
-  return {
-    settings: {
-      currentMileage: state.settings.currentMileage,
-      currentDate: state.settings.currentDate,
-      showAllReminders: state.settings.showAllReminders,
-    },
-    records: state.records,
-  };
-}
-
-async function uploadCloudData({ silent = false } = {}) {
-  if (!state.settings.syncKey || !state.settings.syncEndpoint) {
-    if (!silent) setSyncStatus("請先輸入同步代碼。", "warn");
-    return;
-  }
-  try {
-    setSyncStatus("正在備份…", "busy");
-    const response = await fetch(state.settings.syncEndpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key: state.settings.syncKey, data: cloudPayload() }),
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
-    state.settings.lastCloudSyncAt = result.data?.cloudUpdatedAt || new Date().toISOString();
-    saveState();
-    setSyncStatus(`已備份 ${formatDateTime(state.settings.lastCloudSyncAt)}`, "ok");
-  } catch (error) {
-    setSyncStatus(`備份失敗：${error.message}`, "warn");
-    console.warn("[sync] upload failed", state.settings.syncEndpoint, error);
-    if (!silent) setToast(`備份失敗：${error.message}`, "warn");
-  }
-}
-
-async function downloadCloudData({ silent = false, uploadIfEmpty = false } = {}) {
-  if (!state.settings.syncKey || !state.settings.syncEndpoint) {
-    setSyncStatus("手機和電腦輸入同一組代碼就會共用資料。", "");
-    return;
-  }
-  try {
-    setSyncStatus("正在同步…", "busy");
-    const url = `${state.settings.syncEndpoint}?key=${encodeURIComponent(state.settings.syncKey)}`;
-    const response = await fetch(url);
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
-
-    if (!result.data) {
-      setSyncStatus("這組代碼還沒有雲端資料，之後的變更會自動備份。", "warn");
-      if (uploadIfEmpty && state.records.length) uploadCloudData({ silent: true });
-      return;
-    }
-
-    state.settings = {
-      ...state.settings,
-      ...result.data.settings,
-      syncKey: state.settings.syncKey,
-      syncEndpoint: state.settings.syncEndpoint,
-      lastCloudSyncAt: result.data.cloudUpdatedAt || new Date().toISOString(),
-    };
-    state.records = Array.isArray(result.data.records) ? result.data.records : [];
-    saveState();
-
-    els.currentMileage.value = state.settings.currentMileage || "";
-    els.currentDate.value = state.settings.currentDate || toDateInput(new Date());
-    resetAddForm();
-    render();
-    setSyncStatus(`已同步 ${formatDateTime(state.settings.lastCloudSyncAt)}`, "ok");
-    if (!silent) setToast("已從雲端取回保養資料。");
-  } catch (error) {
-    setSyncStatus(`同步失敗：${error.message}`, "warn");
-    console.warn("[sync] download failed", state.settings.syncEndpoint, error);
-    if (!silent) setToast(`同步失敗：${error.message}`, "warn");
-  }
-}
+function uploadCloudData() { return syncVehicle(vehicleId); }
+function downloadCloudData() { return syncVehicle(vehicleId); }
 
 /** 直接在 App 裡打 ?diag=1，省得在手機上開網址查問題。 */
 async function testSyncConnection() {
   els.syncDiag.hidden = false;
   els.syncDiag.textContent = "測試中…";
   try {
-    const response = await fetch(`${state.settings.syncEndpoint}?diag=1`);
+    const response = await fetch(`${defaultSyncEndpoint()}?diag=1`);
     const report = await response.json();
     const lines = [
       `後端　　${report.backend}`,
@@ -859,14 +883,18 @@ async function testSyncConnection() {
 }
 
 function updateSyncKey() {
-  state.settings.syncKey = els.syncKey.value.trim();
-  saveState();
+  const key = els.syncKey.value.trim();
+  if (key && (key.length < 6 || key.length > 80)) { setSyncStatus("同步代碼需要 6 至 80 個字", "warn"); return; }
+  sharedSyncKey = key;
+  localStorage.setItem("maintenance-shared-sync-key", JSON.stringify(key));
+  Object.keys(vehicles).forEach(id => { vehicles[id].settings.syncKey = key; saveVehicle(id); delete syncStatusByVehicle[id]; });
   updateSyncStatus();
-  downloadCloudData({ silent: false, uploadIfEmpty: true });
+  Object.keys(vehicles).forEach(id => syncVehicle(id));
 }
 
 function updateSyncStatus() {
-  if (!state.settings.syncKey) {
+  if (syncStatusByVehicle[vehicleId]) { setSyncStatus(...syncStatusByVehicle[vehicleId]); return; }
+  if (!sharedSyncKey) {
     setSyncStatus("手機和電腦輸入同一組代碼就會共用資料。", "");
     return;
   }
@@ -887,12 +915,13 @@ function setSyncStatus(text, status) {
 
 function toggleReminderExpansion() {
   state.settings.showAllReminders = !state.settings.showAllReminders;
-  saveStateAndSync();
+  saveState();
   renderReminders();
 }
 
 function clearRecords() {
-  if (!confirm("確定要清空所有保養紀錄嗎？這個動作無法復原。")) return;
+  if (!confirm(`確定清空 ${VEHICLES[vehicleId].name} 的所有保養紀錄嗎？另一台車不受影響。這個動作無法復原。`)) return;
+  state.records.forEach(record => { state.tombstones[record.id] = new Date().toISOString(); });
   state.records = [];
   saveStateAndSync();
   render();
@@ -904,7 +933,7 @@ function exportData() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `cb350-maintenance-${toDateInput(new Date())}.json`;
+  link.download = `${vehicleId}-maintenance-${toDateInput(new Date())}.json`;
   link.click();
   URL.revokeObjectURL(url);
   setToast("備份檔已下載。");
@@ -943,7 +972,7 @@ function statusRank(status) {
 }
 
 function statusText(status) {
-  return { due: "已到期", soon: "快到期", ok: "正常" }[status] || status;
+  return { due: "已到期", soon: "快到期", ok: "正常", unknown: "待設定" }[status] || status;
 }
 
 function addMonths(date, months) {

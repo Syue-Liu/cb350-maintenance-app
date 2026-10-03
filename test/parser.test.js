@@ -52,13 +52,14 @@ test("相對日期", () => {
 test("子字串不再造成連鎖誤判", () => {
   // 原本這句會同時命中 engineOil / oilFilter / chain / chainSlider / battery
   const keys = parser.matchItemKeys("更換機油濾芯與鏈條滑塊，順便檢查大燈", MAINTENANCE_ITEMS);
-  assert.deepEqual(keys.sort(), ["battery", "chainSlider", "oilFilter"].sort());
+  // Current handbook folds chain-slider work into the shop's major service.
+  assert.deepEqual(keys.sort(), ["battery", "majorService", "oilFilter"].sort());
 });
 
 test("煞車油與煞車皮不會再額外命中煞車系統", () => {
   assert.deepEqual(parser.matchItemKeys("更換煞車油 DOT 4", MAINTENANCE_ITEMS), ["brakeFluid"]);
   assert.deepEqual(parser.matchItemKeys("檢查煞車皮", MAINTENANCE_ITEMS), ["brakePads"]);
-  assert.deepEqual(parser.matchItemKeys("檢查煞車系統", MAINTENANCE_ITEMS), ["brakeSystem"]);
+  assert.deepEqual(parser.matchItemKeys("檢查煞車系統", MAINTENANCE_ITEMS), ["majorService"]);
 });
 
 test("單純換機油只會產生一筆機油紀錄", () => {

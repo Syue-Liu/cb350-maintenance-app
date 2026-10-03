@@ -1,5 +1,6 @@
 import net from "node:net";
 import tls from "node:tls";
+import { randomUUID } from "node:crypto";
 
 const KEY_PREFIX = "cb350-maintenance:";
 
@@ -70,29 +71,41 @@ export default async function handler(req, res) {
   try {
     if (req.method === "GET") {
       let syncKey;
+      let vehicleId;
       try {
-        syncKey = normalizeSyncKey(req.query.key);
+        vehicleId = normalizeVehicleId(req.query.vehicleId);
+        syncKey = normalizeSyncKey(req.query.key, vehicleId);
       } catch (error) {
         return res.status(400).json({ error: error.message });
       }
       const data = await readKey(syncKey);
-      return res.status(200).json({ data, cloudUpdatedAt: data?.cloudUpdatedAt || null });
+      return res.status(200).json({ data, vehicleId, protocolVersion: 2, cloudUpdatedAt: data?.cloudUpdatedAt || null });
     }
 
     if (req.method === "POST") {
       const body = typeof req.body === "string" ? safeJson(req.body) : req.body || {};
       let syncKey;
+      let vehicleId;
       try {
-        syncKey = normalizeSyncKey(body.key);
+        vehicleId = normalizeVehicleId(body.vehicleId);
+        syncKey = normalizeSyncKey(body.key, vehicleId);
       } catch (error) {
         return res.status(400).json({ error: error.message });
       }
-      if (!body.data || typeof body.data !== "object") {
+      if (!body.data || typeof body.data !== "object" || !Array.isArray(body.data.records) || !body.data.settings || (body.data.vehicleId && body.data.vehicleId !== vehicleId)) {
         return res.status(400).json({ error: "Missing sync data" });
       }
-      const payload = { ...body.data, cloudUpdatedAt: new Date().toISOString() };
-      await writeKey(syncKey, payload);
-      return res.status(200).json({ ok: true, data: payload });
+      if (JSON.stringify(body.data).length > 1000000) return res.status(413).json({ error: "保養資料過大，請先匯出備份" });
+      if (vehicleId === "gogoro" && typeof body.expectedVersion !== "string") return res.status(400).json({ error: "請更新保養手冊後再同步" });
+      const payload = { ...body.data, vehicleId, cloudVersion: randomUUID(), cloudUpdatedAt: new Date().toISOString() };
+      if (typeof body.expectedVersion === "string") {
+        const saved = await compareAndSet(syncKey, body.expectedVersion, payload);
+        if (!saved) return res.status(409).json({ error: "另一台裝置已更新，請重新同步" });
+      } else {
+        // Legacy Honda clients retain their original key and request format.
+        await writeKey(syncKey, payload);
+      }
+      return res.status(200).json({ ok: true, data: payload, vehicleId, protocolVersion: 2 });
     }
 
     return res.status(405).json({ error: "Method not allowed" });
@@ -178,12 +191,44 @@ async function restSet(key, value) {
   if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
 }
 
-function normalizeSyncKey(value) {
+function normalizeVehicleId(value) {
+  if (value == null || value === "") return "honda";
+  if (value !== "honda" && value !== "gogoro") throw new Error("Unknown vehicle");
+  return value;
+}
+
+function normalizeSyncKey(value, vehicleId = "honda") {
   const key = String(value || "").trim();
   if (!key) throw new Error("Missing sync key");
   if (key.length < 6) throw new Error("同步代碼至少要 6 個字");
   if (key.length > 80) throw new Error("同步代碼太長");
-  return `${KEY_PREFIX}${key}`;
+  return `${vehicleId === "honda" ? KEY_PREFIX : "garage-gogoro-ezzy500:"}${key}`;
+}
+
+// Atomic version comparison prevents two devices from overwriting each other's edits.
+const CAS_SCRIPT = `
+local old = redis.call('GET', KEYS[1])
+local version = ''
+if old then
+  local ok, data = pcall(cjson.decode, old)
+  if not ok then return redis.error_reply('Invalid stored maintenance data') end
+  version = data.cloudVersion or data.cloudUpdatedAt or ''
+end
+if version ~= ARGV[1] then return 0 end
+redis.call('SET', KEYS[1], ARGV[2])
+return 1`;
+
+async function compareAndSet(key, expectedVersion, payload) {
+  const command = ["EVAL", CAS_SCRIPT, "1", key, expectedVersion, JSON.stringify(payload)];
+  if (activeBackend() !== "rest") return Number(await redisCommand(REDIS_URL, command)) === 1;
+  const response = await fetch(REST_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${REST_TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify(command),
+  });
+  const result = await response.json();
+  if (!response.ok || result.error) throw new Error(result.error || `HTTP ${response.status}`);
+  return Number(result.result) === 1;
 }
 
 // ------------------------------------------------------------------ TCP 後援

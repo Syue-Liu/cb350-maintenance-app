@@ -82,6 +82,8 @@
 
   function render() {
     const card = ensureCard();
+    card.hidden = document.body.dataset.vehicle === "gogoro";
+    if (card.hidden) return;
     const mileage = Number(mileageInput?.value) || 0;
     const milestone = currentMilestone();
     const checked = new Set(getChecked(milestone));
@@ -133,5 +135,6 @@
 
   bikeForm?.addEventListener("submit", () => requestAnimationFrame(render));
   mileageInput?.addEventListener("change", render);
+  document.addEventListener("vehiclechange", render);
   render();
 })();

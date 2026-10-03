@@ -1,4 +1,4 @@
-const CACHE_NAME = "cb350-maintenance-v16";
+const CACHE_NAME = "cb350-maintenance-v17-garage";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -7,6 +7,10 @@ const APP_SHELL = [
   "./maintenance-icons.css",
   "./desktop-fixes.css",
   "./small-service.css",
+  "./vehicle-theme.css",
+  "./vehicle-profiles.js",
+  "./vehicle-sync.js",
+  "./assets/gogoro-ezzy-jessie.png",
   "./maintenance-items.js",
   "./parser.js",
   "./app.js",
@@ -25,7 +29,7 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))));
+  event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith("cb350-maintenance-") && key !== CACHE_NAME).map((key) => caches.delete(key)))));
   self.clients.claim();
 });
 

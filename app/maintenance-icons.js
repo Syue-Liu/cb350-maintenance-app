@@ -1,6 +1,6 @@
 /* Decorative icons for CB350 RS maintenance items and dashboard navigation. */
 (() => {
-  const items = window.CB350Data?.MAINTENANCE_ITEMS || [];
+  const items = [...(window.CB350Data?.MAINTENANCE_ITEMS || []), ...(window.VehicleProfiles?.profiles.gogoro.items || [])];
   const byName = new Map(items.map((item) => [item.name, item.key]));
 
   const ICONS = {
@@ -31,6 +31,7 @@
   const fallback = '<circle cx="12" cy="12" r="7"/><path d="M12 8v5M12 16h.01"/>';
 
   function svgFor(key) {
+    key = ({ezzyService:"general",switches:"battery",hinges:"general",batteryContacts:"battery"})[key] || key;
     return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${ICONS[key] || fallback}</svg>`;
   }
 
@@ -100,7 +101,7 @@
       const label = card.querySelector(':scope > span')?.textContent?.trim();
       let key = '';
       if (label === '逾期項目') key = 'calendar';
-      else if (label === '距離小保養') key = 'speedometer';
+      else if (label === '距離小保養' || label === '距離定期保養') key = 'speedometer';
       else if (label === '快到期') key = 'bell';
       else if (label === '下次保養') key = keyFromName(card.querySelector('strong')?.textContent);
       if (!key) return;

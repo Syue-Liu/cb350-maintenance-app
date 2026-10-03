@@ -1,10 +1,19 @@
-# Honda CB350 RS 保養手冊
+# CB350 RS / EZZY 500 保養手冊
 
-記錄每次進廠的里程、項目與費用，依原廠週期提醒下一次保養。手機優先，資料存在瀏覽器裡，可用同步代碼在手機和電腦之間共用。
+在既有 CB350 RS 手冊中加入 Gogoro EZZY 500 歡樂牛仔號。保留原有紙感版型、保養歷史、花費統計與小保養清單；用頁首選單切換車輛，各車里程、紀錄、提醒與費用互不混用。
+
+## 車輛與週期
+
+- CB350 RS：保留車主原設定，機油每 4,000 km、大保養每 20,000 km。
+- EZZY 500：首次及後續定保每 5,000 km 或 6 個月，先到為準。到「設定」填入交車日期與交車里程，或補登定保紀錄，才開始算週期。
+- EZZY 500 煞車油每 18,000 km 或 3 年；輪胎、煞車皮等每次定保檢查，依實際車況更換。沒有機油、火星塞或 CB350 的大保養規則。
+- 完整「定期保養」紀錄會更新例行檢查的基準，但不會重設煞車油更換週期；只記輪胎檢查也不會當作已完成全套定保。
+- [Gogoro 官方保養週期](https://support.gogoro.com/tw/articles/6080334790067584?collection=5238806020866982)。實際維修依服務中心檢查，App 不代表零件仍安全可用。
+- [歡樂牛仔號官方車款圖片](https://www.gogoro.com/tw/smartscooter/ezzy-500/toy-story/)，圖片權利屬 Gogoro / Disney / Pixar。
 
 ## 功能
 
-- 選單式新增：15 個保養項目依分類分組，動作選項隨項目變動
+- 選單式新增：依目前車輛的保養項目分組，動作選項隨項目變動
 - 快捷列：里程週期短、最常做的項目（鏈條、機油、煞車皮、輪胎、煞車油）一點帶入
 - 廠牌／規格與金額為選填欄位，機油預設帶入 10W-40
 - 也可以用一句中文記，自動抓出日期、里程、費用與項目
@@ -75,12 +84,22 @@ App 的設定頁有「測試同步連線」按鈕，會直接顯示結果。也�
 
 同步代碼等於密碼，知道的人就能讀寫你的紀錄。建議使用一長串隨機字元，不要用猜得到的名字。
 
+### 雙車資料相容
+
+Honda 沿用本機 `cb350-maintenance-app-v1` 及雲端 `cb350-maintenance:<code>`，不搬移或清空原紀錄。EZZY 使用獨立本機 `gogoro-ezzy500-maintenance-v1` 與雲端 `garage-gogoro-ezzy500:<code>`。兩車共用同步代碼，但不共用資料。
+
+開啟頁面、回到視窗、恢復連線與每 60 秒（前景）會自動同步；修改後也會同步。紀錄依 ID 合併，較新的編輯優先，刪除使用 tombstones，並以 Redis 原子版本比對避免跨裝置覆蓋。沒有同步成功時保留本機資料。
+
+前後端需一起更新。新版客戶端要求 `protocolVersion: 2` 與正確 `vehicleId`，遇到舊後端會停止同步，而非把 EZZY 寫入 Honda。升級後請重新整理手機與電腦。舊 Honda 客戶端仍能讀寫舊路徑，但不具新版本的合併與衝突保護。
+
+初次上線仍需在各裝置設定相同代碼。交車日期不會擅自使用今天填入。提醒只在 App 中顯示，沒有背景推播。
+
 ## 本機測試
 
 解析邏輯在 `app/parser.js`，純函式、無 DOM 依賴：
 
 ```
-node --test test/parser.test.js
+node --test test/*.test.*
 ```
 
 改動 regex 或關鍵字之後請先跑過測試。
@@ -89,9 +108,12 @@ node --test test/parser.test.js
 
 ```
 index.html                  轉址到 app/
-app/index.html              App 主頁（三支 js 的載入順序不可調換）
+app/index.html              App 主頁（依檔案中的順序載入腳本）
 app/maintenance-items.js    保養項目、分類、動作清單與週期定義
 app/parser.js               文字解析，純函式
+app/vehicle-profiles.js     雙車目錄、EZZY 提醒、資料合併
+app/vehicle-sync.js         分車自動同步與版本衝突保護
+app/vehicle-theme.css       保留原版型的雙車主題與手機調整
 app/app.js                  UI、狀態、雲端同步
 app/styles.css              樣式
 api/sync.js                 雲端同步 API（含 ?diag=1 排查端點）

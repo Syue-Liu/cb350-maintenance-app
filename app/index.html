@@ -8,15 +8,24 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./icons/icon.svg" />
-    <meta name="description" content="Honda CB350 RS 的保養手冊：記錄每次進廠的里程、項目與費用，依原廠週期提醒下次保養。" />
-    <title>CB350 RS 保養手冊</title>
+    <meta name="description" content="Honda CB350 RS 與 Gogoro EZZY 500 的保養手冊，分車記錄里程、保養、費用與提醒。" />
+    <title>我的保養手冊 · CB350 RS / EZZY 500</title>
     <link rel="stylesheet" href="./styles.css" />
     <link rel="stylesheet" href="./mobile-fixes.css" />
     <link rel="stylesheet" href="./maintenance-icons.css" />
+    <link rel="stylesheet" href="./vehicle-theme.css" />
   </head>
   <body>
     <header class="masthead">
-      <div class="masthead-copy"><p class="mark">Honda CB350 RS</p><h1>保養手冊</h1></div>
+      <div class="masthead-copy">
+        <p class="mark" id="vehicleMark">Honda CB350 RS</p>
+        <h1>保養手冊</h1>
+        <p class="vehicle-caption" id="vehicleCaption">RED · 騎乘日誌</p>
+        <label class="vehicle-picker"><span class="sr-only">選擇車輛</span>
+          <select id="vehicleSelect"><option value="honda">CB350 RS · 紅</option><option value="gogoro">EZZY 500 · 歡樂牛仔號</option></select>
+        </label>
+      </div>
+      <img class="ezzy-header-image" src="./assets/gogoro-ezzy-jessie.png" alt="Gogoro EZZY 500 歡樂牛仔號" width="800" height="800" />
       <button class="icon-btn" id="settingsButton" type="button" aria-label="設定" title="設定">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
@@ -32,10 +41,16 @@
       <section class="view" id="history" role="tabpanel" aria-labelledby="tab-history"><div class="view-head"><h2>保養歷史</h2></div><div class="history-tools" aria-label="搜尋與篩選保養歷史"><label class="field search-field"><span>搜尋</span><input id="historySearch" type="search" placeholder="項目、廠牌、備註、日期…" autocomplete="off" /></label><label class="field"><span>狀態</span><select id="historyFilter"><option value="all">全部紀錄</option><option value="recent">最近 12 個月</option><option value="cost">有花費</option><option value="frequent">常用項目</option></select></label></div><div class="visit-list" id="visitList"></div></section>
       <section class="view" id="spending" role="tabpanel" aria-labelledby="tab-spending"><div class="view-head"><h2>花費總覽</h2></div><div id="spendSummary"></div><div id="spendByItem"></div><div id="spendByYear"></div></section>
       <section class="view" id="schedule" role="tabpanel" aria-labelledby="tab-schedule"><div class="view-head"><h2>原廠週期</h2></div><div class="schedule-list" id="scheduleList"></div></section>
-      <section class="view" id="settings" role="region" aria-label="設定"><div class="view-head"><h2>設定</h2><button class="btn quiet" id="closeSettingsButton" type="button">完成</button></div><div class="setting-block"><label class="field"><span>同步代碼</span><input id="syncKey" type="text" autocomplete="off" inputmode="latin" placeholder="至少 6 個字" /></label><p class="hint" id="syncStatus">手機和電腦輸入同一組代碼就會共用資料。</p><button class="btn block" id="syncTestButton" type="button">測試同步連線</button><pre class="diag" id="syncDiag" hidden></pre><p class="hint warn">這組代碼等於密碼，知道的人就能讀寫你的紀錄。建議用一長串隨機字元。</p></div><div class="setting-block"><button class="btn block" id="exportButton" type="button">匯出 JSON 備份</button><button class="btn block danger" id="clearButton" type="button">清空所有紀錄</button></div></section>
+      <section class="view" id="settings" role="region" aria-label="設定"><div class="view-head"><h2>設定</h2><button class="btn quiet" id="closeSettingsButton" type="button">完成</button></div><div class="setting-block" id="deliveryBlock" hidden>
+        <h3 class="sub-head">EZZY 500 交車資料</h3>
+        <form id="deliveryForm"><div class="field-row">
+          <label class="field"><span>交車日期</span><input id="deliveryDate" type="date" required /></label>
+          <label class="field"><span>交車里程</span><input id="deliveryMileage" type="number" min="0" step="1" inputmode="numeric" required /></label>
+        </div><button class="btn primary block" type="submit">儲存交車資料</button></form>
+      </div><div class="setting-block"><label class="field"><span>同步代碼</span><input id="syncKey" type="text" autocomplete="off" inputmode="latin" placeholder="至少 6 個字" /></label><p class="hint" id="syncStatus">手機和電腦輸入同一組代碼就會共用資料。</p><button class="btn block" id="syncTestButton" type="button">測試同步連線</button><pre class="diag" id="syncDiag" hidden></pre><p class="hint warn">這組代碼等於密碼，知道的人就能讀寫你的紀錄。建議用一長串隨機字元。</p></div><div class="setting-block"><button class="btn block" id="exportButton" type="button">匯出 JSON 備份</button><button class="btn block danger" id="clearButton" type="button">清空這台車的紀錄</button></div></section>
     </main>
     <p class="toast" id="toast" role="status" aria-live="polite" hidden></p>
     <nav class="tabbar" role="tablist" aria-label="主要分頁"><button class="tab is-active" id="tab-reminders" data-tab="reminders" role="tab" aria-selected="true" aria-controls="reminders" type="button"><span class="tab-dot" id="tabBadge" hidden></span>提醒</button><button class="tab" id="tab-compose" data-tab="compose" role="tab" aria-selected="false" aria-controls="compose" type="button">新增</button><button class="tab" id="tab-history" data-tab="history" role="tab" aria-selected="false" aria-controls="history" type="button">歷史</button><button class="tab" id="tab-spending" data-tab="spending" role="tab" aria-selected="false" aria-controls="spending" type="button">花費</button><button class="tab" id="tab-schedule" data-tab="schedule" role="tab" aria-selected="false" aria-controls="schedule" type="button">週期</button></nav>
-    <script src="./maintenance-items.js"></script><script src="./parser.js"></script><script src="./app.js"></script><script src="./maintenance-icons.js"></script><script src="./navigation-fixes.js"></script><script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {})); }</script>
+    <script src="./maintenance-items.js"></script><script src="./parser.js"></script><script src="./vehicle-profiles.js"></script><script src="./vehicle-sync.js"></script><script src="./app.js"></script><script src="./maintenance-icons.js"></script><script src="./navigation-fixes.js"></script><script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {})); }</script>
   </body>
 </html>
