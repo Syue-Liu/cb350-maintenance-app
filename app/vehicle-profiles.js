@@ -13,7 +13,7 @@
   ];
   const profiles = {
     honda: { name: "Honda CB350 RS", label: "CB350 RS · 紅", storageKey: "cb350-maintenance-app-v1", items: honda.MAINTENANCE_ITEMS, categories: honda.CATEGORIES },
-    gogoro: { name: "Gogoro EZZY 500", label: "EZZY 500 · 歡樂牛仔號", storageKey: "gogoro-ezzy500-maintenance-v1", items: ezzyItems, categories: honda.CATEGORIES.filter(c => ["overall", "electric", "chassis", "brake"].includes(c.key)) },
+    gogoro: { name: "Gogoro EZZY 500", label: "EZZY 500 · 歡樂牛仔號", storageKey: "gogoro-ezzy500-maintenance-v1", items: ezzyItems, categories: [{ key: "overall", name: "定期保養", color: "#a84c31" }, ...honda.CATEGORIES.filter(c => ["electric", "chassis", "brake"].includes(c.key))] },
   };
   const source = "https://support.gogoro.com/tw/articles/6080334790067584?collection=5238806020866982";
   function hasMileage(value) { return value !== "" && value != null && Number.isFinite(Number(value)) && Number(value) >= 0; }

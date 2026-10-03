@@ -54,6 +54,11 @@ body[data-vehicle="gogoro"] .dash-hero::after { background: #cf9c33; }
   .odo-footer .field > span { text-align: center; }
   .dash-hero strong { font-size: 38px; }
   .dash-card strong { font-size: 24px; }
+  .schedule-row { display: grid; grid-template-columns: 36px minmax(0, 1fr); column-gap: 10px; row-gap: 3px; align-items: center; padding-left: 0; }
+  .schedule-row > .maintenance-icon { position: static; transform: none; width: 36px; height: 36px; grid-column: 1; grid-row: 1 / 3; }
+  .schedule-name { grid-column: 2; grid-row: 1; }
+  .schedule-every { grid-column: 2; grid-row: 2; text-align: left; white-space: normal; }
+  .schedule-row .major-service-note { grid-column: 2; }
 }
 @media (max-width: 359px) {
   body[data-vehicle="gogoro"] .ezzy-header-image { width: 108px; height: 108px; top: 20px; right: 8px; }
