@@ -398,7 +398,7 @@ function renderDashboard() {
   const reminders = getReminders();
   const due = reminders.filter((item) => item.status === "due");
   const soon = reminders.filter((item) => item.status === "soon");
-  const next = reminders.find((item) => ["due", "soon"].includes(item.status)) || reminders.find(item => item.status !== "unknown");
+  const next = reminders.find((item) => ["due", "soon"].includes(item.status)) || (vehicleId === "gogoro" ? reminders.find(item => item.key === "ezzyService" && item.status !== "unknown") : reminders.find(item => item.status !== "unknown"));
   const regular = reminders.find(item => item.key === "ezzyService");
   const nextMinor = vehicleId === "gogoro" ? regular.nextKm : currentMileage ? nextCycle(currentMileage, MINOR_SERVICE_KM) : 0;
   const minorLeft = nextMinor ? Math.max(0, nextMinor - currentMileage) : 0;
