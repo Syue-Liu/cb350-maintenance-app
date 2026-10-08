@@ -394,7 +394,6 @@ function render() {
 
 function renderDashboard() {
   const currentMileage = Number(state.settings.currentMileage) || 0;
-  const currentDate = state.settings.currentDate || toDateInput(new Date());
   const reminders = getReminders();
   const due = reminders.filter((item) => item.status === "due");
   const soon = reminders.filter((item) => item.status === "soon");
@@ -404,13 +403,8 @@ function renderDashboard() {
   const minorLeft = nextMinor ? Math.max(0, nextMinor - currentMileage) : 0;
 
   els.dashboard.innerHTML = `
-    <div class="dash-hero">
-      <span class="dash-label">目前里程</span>
-      <strong>${hasMileage(state.settings.currentMileage) ? number(currentMileage) : "未設定"}<small>${hasMileage(state.settings.currentMileage) ? " km" : ""}</small></strong>
-      <span class="dash-date">基準日 ${escapeHtml(currentDate)}</span>
-    </div>
     <div class="dash-grid">
-      <button class="dash-card urgent" type="button" data-dash-tab="reminders">
+      <button class="dash-card${due.length ? " urgent" : ""}" type="button" data-dash-tab="reminders">
         <span>逾期項目</span>
         <strong>${due.length}</strong>
         <small>${due.length ? due.slice(0, 2).map((item) => item.name).join("、") : "目前正常"}</small>
@@ -547,6 +541,7 @@ function renderVisits() {
         .map((record) => {
           const category = CATEGORY_BY_KEY.get(ITEM_BY_KEY.get(record.key)?.category);
           const detail = [record.action, record.brand].filter(Boolean).join("　");
+          const note = visibleNote(record);
           return `
             <div class="visit-item">
               <span class="dot" style="background:${category ? category.color : "#999"}"></span>
@@ -559,7 +554,7 @@ function renderVisits() {
                 record.item,
               )}">×</button>
               ${detail ? `<span class="visit-detail">${escapeHtml(detail)}</span>` : ""}
-              ${record.note ? `<span class="visit-note">${escapeHtml(record.note)}</span>` : ""}
+              ${note ? `<span class="visit-note">${escapeHtml(note)}</span>` : ""}
             </div>`;
         })
         .join("");
@@ -582,6 +577,8 @@ function renderVisits() {
 
   els.visitList.querySelectorAll("[data-delete]").forEach((button) => {
     button.addEventListener("click", () => {
+      const record = state.records.find((entry) => entry.id === button.dataset.delete);
+      if (!record || !confirm(`刪除「${record.item}」${record.date ? `（${record.date}）` : ""}這筆紀錄？`)) return;
       state.tombstones[button.dataset.delete] = new Date().toISOString();
       state.records = state.records.filter((record) => record.id !== button.dataset.delete);
       saveStateAndSync();
@@ -589,6 +586,14 @@ function renderVisits() {
       setToast("已刪除一筆。");
     });
   });
+}
+
+// 一句話記錄會把項目的週期說明塞進備註，歷史裡每筆都重複一次；顯示時拿掉，只留使用者自己的內容。
+function visibleNote(record) {
+  const reference = ITEM_BY_KEY.get(record.key)?.note;
+  const note = String(record.note || "");
+  if (!reference || !note.includes(reference)) return note;
+  return note.replace(reference, "").replace(/^；|；(?=（|$)/g, "").trim();
 }
 
 function getFilteredRecords() {

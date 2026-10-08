@@ -1,4 +1,4 @@
-const CACHE_NAME = "cb350-maintenance-v19-garage";
+const CACHE_NAME = "cb350-maintenance-v20-dash";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -20,7 +20,6 @@ const APP_SHELL = [
   "./manifest.webmanifest",
   "./icons/icon.svg",
   "./assets/cb350-rs-banner.webp",
-  "./assets/cb350-rs-red.jpg",
 ];
 
 self.addEventListener("install", (event) => {
@@ -33,17 +32,23 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+// Stale-while-revalidate：先用快取讓畫面立即出現，同時在背景抓新版，下次開啟就是最新的。
+// 之前是純 cache-first，不改 CACHE_NAME 就永遠拿不到更新。
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (request.method !== "GET") return;
-  if (new URL(request.url).pathname.includes("/api/")) return;
-  event.respondWith(caches.match(request).then((cached) => {
-    if (cached) return cached;
-    return fetch(request).then((response) => {
-      if (!response || response.status !== 200 || response.type === "opaque") return response;
-      const copy = response.clone();
-      caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin || url.pathname.includes("/api/")) return;
+  event.respondWith(caches.open(CACHE_NAME).then(async (cache) => {
+    const cached = await cache.match(request, { ignoreSearch: request.mode === "navigate" });
+    const network = fetch(request).then((response) => {
+      if (response && response.status === 200 && response.type === "basic") cache.put(request, response.clone());
       return response;
     });
+    if (cached) {
+      event.waitUntil(network.catch(() => {}));
+      return cached;
+    }
+    return network;
   }));
 });

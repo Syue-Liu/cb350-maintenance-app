@@ -1063,7 +1063,6 @@ body::before {
   padding-top: 16px;
 }
 
-.dash-hero,
 .dash-card {
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -1071,25 +1070,6 @@ body::before {
   box-shadow: 0 10px 28px rgba(23, 24, 26, 0.07);
 }
 
-.dash-hero {
-  position: relative;
-  overflow: hidden;
-  padding: 16px;
-  background:
-    linear-gradient(135deg, rgba(15, 17, 20, 0.96), rgba(15, 17, 20, 0.82)),
-    url("./assets/cb350-rs-red.jpg") center / cover;
-  color: #fffaf0;
-}
-
-.dash-hero::after {
-  content: "";
-  position: absolute;
-  inset: auto 16px 0;
-  height: 3px;
-  background: var(--honda);
-}
-
-.dash-label,
 .dash-card span {
   display: block;
   color: inherit;
@@ -1098,27 +1078,9 @@ body::before {
   font-weight: 700;
 }
 
-.dash-hero strong {
-  display: block;
-  margin-top: 4px;
-  font-size: clamp(34px, 12vw, 54px);
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0;
-  line-height: 1;
-}
-
-.dash-hero small,
 .dash-card small {
   font-size: 13px;
   font-weight: 600;
-}
-
-.dash-date {
-  display: block;
-  margin-top: 8px;
-  color: rgba(255, 250, 240, 0.72);
-  font-size: 13px;
 }
 
 .dash-grid {
@@ -1282,11 +1244,6 @@ body::before {
     background: transparent;
   }
 
-  .dashboard {
-    grid-template-columns: minmax(250px, 0.85fr) 1.5fr;
-    align-items: stretch;
-  }
-
   .dash-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -1336,4 +1293,16 @@ body::before {
   .dash-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* 年度花費沿用 .schedule-row 的外觀，但沒有項目圖示，不需要預留圖示欄。 */
+#spendByYear .schedule-row {
+  display: flex;
+  padding-left: 0;
+}
+
+#spendByYear .schedule-name,
+#spendByYear .schedule-every {
+  grid-column: auto;
+  grid-row: auto;
 }

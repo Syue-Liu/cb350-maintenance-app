@@ -74,7 +74,7 @@
   }
 
   function decorateSchedule() {
-    document.querySelectorAll('.schedule-row').forEach((row) => {
+    document.querySelectorAll('#scheduleList .schedule-row').forEach((row) => {
       if (row.querySelector('.maintenance-icon')) return;
       const key = keyFromName(row.querySelector('.schedule-name')?.textContent);
       row.prepend(makeIcon(key, 'maintenance-icon--schedule'));

@@ -182,7 +182,6 @@ input[type="date"]::-webkit-date-and-time-value {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .dash-hero,
   .dash-card,
   .status-strip {
     width: 100%;
@@ -218,9 +217,6 @@ input[type="date"]::-webkit-date-and-time-value {
     font-size: clamp(42px, 14vw, 58px);
   }
 
-  .dash-hero strong {
-    font-size: clamp(32px, 13vw, 48px);
-  }
 }
 
 @media (min-width: 760px) {
