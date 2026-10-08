@@ -1,4 +1,4 @@
-const CACHE_NAME = "cb350-maintenance-v20-dash";
+const CACHE_NAME = "cb350-maintenance-v21-jessie";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -10,7 +10,7 @@ const APP_SHELL = [
   "./vehicle-theme.css",
   "./vehicle-profiles.js",
   "./vehicle-sync.js",
-  "./assets/gogoro-ezzy-jessie.png",
+  "./assets/ezzy-500-jessie.jpg",
   "./maintenance-items.js",
   "./parser.js",
   "./app.js",

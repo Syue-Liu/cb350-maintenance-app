@@ -9,7 +9,6 @@
 .vehicle-picker { display: block; margin-top: 14px; max-width: 265px; }
 .vehicle-picker select { width: 100%; min-height: 40px; padding: 8px 30px 8px 10px; font-size: 14px; border: 1px solid #ffffff70; border-radius: 6px; color: #fff; background: #111111bb; }
 .vehicle-picker option { background: var(--card); color: var(--ink); }
-.ezzy-header-image { display: none; }
 .masthead .icon-btn { position: relative; z-index: 2; }
 .schedule-source { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--ink-2); font-size: 14px; }
 .schedule-source a { display: block; margin-top: 6px; color: var(--honda); }
@@ -23,25 +22,24 @@
 .field input[type="date"]::-webkit-date-and-time-value { display: block; text-align: center; line-height: 44px; margin: 0; padding: 0; }
 .field input[type="date"]::-webkit-datetime-edit { padding: 0; }
 body[data-vehicle="gogoro"] { --honda: #ae2833; --focus: #326b83; }
-body[data-vehicle="gogoro"] .masthead { background: #f2e4bd; color: #262728; border-bottom: 4px solid #ad303c; }
-body[data-vehicle="gogoro"] .masthead::after { display: none; }
-body[data-vehicle="gogoro"] .mark { color: #735620; }
-body[data-vehicle="gogoro"] .vehicle-caption { color: #855321; opacity: 1; }
+/* 官網翠絲實拍照：人物在右半邊，左邊用暖棕漸層壓住，讓白字讀得清楚。 */
+body[data-vehicle="gogoro"] .masthead { background: #e9b545 url("./assets/ezzy-500-jessie.jpg") right 30% / auto 175% no-repeat; color: #fff; border-bottom: 4px solid #ad303c; }
+body[data-vehicle="gogoro"] .masthead::after { background: linear-gradient(90deg, rgba(110, 52, 18, 0.85), rgba(110, 52, 18, 0.55) 45%, rgba(110, 52, 18, 0) 75%); }
+body[data-vehicle="gogoro"] .mark { color: rgba(255, 255, 255, 0.9); }
+body[data-vehicle="gogoro"] .vehicle-caption { color: #fff; opacity: 0.9; }
 body[data-vehicle="gogoro"] .vehicle-picker select { background: #fffaf0; color: #222; border-color: #c5ae7f; }
-body[data-vehicle="gogoro"] .ezzy-header-image { display: block; position: absolute; height: 185px; width: 185px; object-fit: contain; left: 50%; top: 0; }
 body[data-vehicle="gogoro"] .icon-btn { color: #855321; border-color: #c5ae7f; background: #fffaf0; }
 @media (min-width: 760px) {
   .masthead { padding-inline: max(32px, calc((100% - 1056px) / 2)); }
-  body[data-vehicle="gogoro"] .ezzy-header-image { width: 280px; height: 190px; left: calc(50% + 20px); }
+  body[data-vehicle="gogoro"] .masthead { background-color: #6e3412; background-size: 40% auto; background-position: right 16%; }
+  body[data-vehicle="gogoro"] .masthead::after { background: linear-gradient(90deg, rgba(110, 52, 18, 1) 61%, rgba(110, 52, 18, 0.55) 67%, rgba(110, 52, 18, 0) 78%); }
 }
 @media (max-width: 759px) {
   body.secondary-tab .masthead { display: flex; min-height: 146px; padding-top: max(14px, env(safe-area-inset-top)); padding-bottom: 14px; }
   body.secondary-tab .vehicle-caption { display: none; }
-  body.secondary-tab .ezzy-header-image { height: 130px; width: 130px; left: auto; right: 40px; }
   .masthead { padding-inline: 16px; align-items: flex-start; }
   .masthead .icon-btn { width: 36px; height: 36px; }
   .vehicle-picker { width: 244px; max-width: calc(100vw - 72px); }
-  body[data-vehicle="gogoro"] .ezzy-header-image { width: 146px; height: 146px; top: 4px; left: auto; right: 24px; }
   .vehicle-picker { margin-top: 30px; }
   .masthead h1 { font-size: 23px; }
   .odo-label { text-align: center; }
@@ -56,6 +54,5 @@ body[data-vehicle="gogoro"] .icon-btn { color: #855321; border-color: #c5ae7f; b
   .schedule-row .major-service-note { grid-column: 2; }
 }
 @media (max-width: 359px) {
-  body[data-vehicle="gogoro"] .ezzy-header-image { width: 108px; height: 108px; top: 20px; right: 8px; }
   .mark { font-size: 11px; }
 }
