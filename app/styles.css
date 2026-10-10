@@ -939,25 +939,19 @@ p {
 
 /* ---------------------------------------------------------------- 歷史列補充 */
 
+/* 欄位：名稱、金額、編輯、刪除；分類色改由左側圖示呈現（見 maintenance-icons.css）。 */
 .visit-item {
-  grid-template-columns: auto 1fr auto auto;
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  align-self: center;
-  border-radius: 50%;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
 }
 
 .visit-detail {
-  grid-column: 2 / -1;
+  grid-column: 1 / -1;
   color: var(--ink-2);
   font-size: 14px;
 }
 
 .visit-note {
-  grid-column: 2 / -1;
+  grid-column: 1 / -1;
 }
 
 /* ---------------------------------------------------------------- 診斷輸出 */
@@ -1110,6 +1104,14 @@ body::before {
   line-height: 1.4;
 }
 
+/* 數字後面的單位（km）跟著數字同一行。 */
+.dash-card strong small {
+  display: inline;
+  color: var(--ink-3);
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .dash-card.urgent {
   border-color: #e6aaa4;
   background: var(--due-bg);
@@ -1214,13 +1216,9 @@ body::before {
   background: #f7efdf;
 }
 
-.visit-item {
-  grid-template-columns: auto 1fr auto auto auto;
-}
-
 .visit-edit {
   grid-row: 1;
-  grid-column: 4;
+  grid-column: 3;
   padding: 4px 8px;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -1231,7 +1229,7 @@ body::before {
 }
 
 .visit-del {
-  grid-column: 5;
+  grid-column: 4;
 }
 
 .diag {
@@ -1264,7 +1262,6 @@ body::before {
 
   .odo-footer,
   .reminder-bottom,
-  .visit-head,
   .text-entry-actions,
   .form-actions {
     align-items: stretch;
@@ -1277,21 +1274,33 @@ body::before {
     width: 100%;
   }
 
+  .visit-head {
+    flex-wrap: wrap;
+  }
+
+  /* 手機上金額移到第二行右側，長名稱（大保養（店家））才不會被擠成一字一行。 */
   .visit-item {
-    grid-template-columns: auto 1fr auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    column-gap: 6px;
   }
 
   .visit-edit {
-    grid-column: 2 / 3;
-    grid-row: 2;
+    grid-column: 2;
   }
 
   .visit-del {
-    grid-column: 4;
+    grid-column: 3;
   }
 
-  .dash-grid {
-    grid-template-columns: 1fr;
+  .visit-detail {
+    grid-row: 2;
+    grid-column: 1;
+  }
+
+  .visit-cost {
+    grid-row: 2;
+    grid-column: 2 / -1;
+    justify-self: end;
   }
 }
 

@@ -37,6 +37,7 @@
 
   function keyFromName(name) {
     const clean = String(name || '').trim();
+    if (clean === '小保養') return 'speedometer';
     if (byName.has(clean)) return byName.get(clean);
     const item = items.find((entry) => clean.includes(entry.name) || entry.name.includes(clean));
     return item?.key || '';
@@ -103,7 +104,7 @@
       if (label === '逾期項目') key = 'calendar';
       else if (label === '距離小保養' || label === '距離定期保養') key = 'speedometer';
       else if (label === '快到期') key = 'bell';
-      else if (label === '下次保養') key = keyFromName(card.querySelector('strong')?.textContent);
+      else if (label === '下次保養') key = keyFromName(card.querySelector('strong')?.textContent) || 'clock';
       if (!key) return;
       card.prepend(makeIcon(key, 'maintenance-icon--dash'));
     });

@@ -16,7 +16,7 @@
 #deliveryForm .field-row { margin-bottom: 14px; }
 .reminder.unknown { border-color: var(--line-strong); }
 .reminder-meta b { font-size: 18px; }
-.odo-readout input { font-size: 60px; letter-spacing: 0; }
+.odo-readout input { font-size: 60px; letter-spacing: 0; flex: 0 1 auto; width: calc(var(--odo-digits, 1) * 1ch + 0.12em); min-width: 2.5ch; } /* --odo-digits 由 app.js 依位數設定 */
 .dash-card strong { font-size: 24px; letter-spacing: 0; }
 .field input[type="date"] { min-height: 46px; height: 46px; text-align: center; padding-block: 0; line-height: 44px; }
 .field input[type="date"]::-webkit-date-and-time-value { display: block; text-align: center; line-height: 44px; margin: 0; padding: 0; }
@@ -44,7 +44,7 @@ body[data-vehicle="gogoro"] .icon-btn { color: #855321; border-color: #c5ae7f; b
   .masthead h1 { font-size: 23px; }
   .odo-label { text-align: center; }
   .odo-readout { justify-content: center; align-items: center; min-height: 64px; }
-  .odo-readout input { width: 220px; max-width: calc(100% - 50px); font-size: 52px; line-height: 64px; height: 64px; text-align: center; }
+  .odo-readout input { max-width: calc(100% - 50px); font-size: 52px; line-height: 64px; height: 64px; text-align: center; }
   .odo-footer .field > span { text-align: center; }
   .dash-card strong { font-size: 24px; }
   .schedule-row { display: grid; grid-template-columns: 36px minmax(0, 1fr); column-gap: 10px; row-gap: 3px; align-items: center; padding-left: 0; }

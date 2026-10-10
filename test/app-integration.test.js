@@ -5,7 +5,7 @@ const fs = require('node:fs');
 function boot(saved = {}) {
   const elements = new Map();
   const element = id => {
-    if (!elements.has(id)) elements.set(id,{ value:'', dataset:{}, hidden:false, textContent:'', _html:'', listeners:{}, classList:{add(){},remove(){},toggle(){}}, addEventListener(name,fn){this.listeners[name]=fn;}, querySelectorAll(){return [];}, contains(){return false;}, focus(){}, scrollIntoView(){}, get innerHTML(){return this._html;},set innerHTML(value){this._html=value;this.textContent=value.replace(/<[^>]+>/g,'');} });
+    if (!elements.has(id)) elements.set(id,{ value:'', placeholder:'', style:{setProperty(){}}, dataset:{}, hidden:false, textContent:'', _html:'', listeners:{}, classList:{add(){},remove(){},toggle(){}}, addEventListener(name,fn){this.listeners[name]=fn;}, querySelectorAll(){return [];}, contains(){return false;}, focus(){}, scrollIntoView(){}, get innerHTML(){return this._html;},set innerHTML(value){this._html=value;this.textContent=value.replace(/<[^>]+>/g,'');} });
     return elements.get(id);
   };
   const storage = new Map(Object.entries(saved).map(([k,v])=>[k,JSON.stringify(v)]));
@@ -48,4 +48,12 @@ test('Delivery settings establish first-service reminders and persist across swi
   assert.equal(app.run('getReminders().find(r=>r.key==="ezzyService").nextKm'),5000);
   app.element('vehicleSelect').value='honda';app.run('switchVehicle()');app.element('vehicleSelect').value='gogoro';app.run('switchVehicle()');
   assert.equal(app.element('deliveryDate').value,'2026-04-03');
+});
+test('Date-based CB350 reminders count from today even when the saved inspection date is stale',()=>{
+  const { today, addMonths } = require('../app/vehicle-profiles.js');
+  const changed = addMonths(today(), -25);
+  const app=boot({'cb350-maintenance-app-v1':{settings:{currentMileage:20000,currentDate:changed},records:[{id:'fluid',key:'brakeFluid',item:'煞車油',action:'更換',mileage:20000,date:changed}]}});
+  assert.equal(app.run('getReminders().find(r=>r.key==="brakeFluid").status'),'due');
+  app.run('resetAddForm()');
+  assert.equal(app.element('addDate').value,today());
 });

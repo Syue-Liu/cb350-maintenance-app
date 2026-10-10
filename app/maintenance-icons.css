@@ -21,15 +21,23 @@
   stroke-linejoin: round;
 }
 
+/* 圖示放在左邊、名稱與週期疊在右邊，一顆按鈕只佔一行高度。 */
 .quick {
   position: relative;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: center;
 }
 
 .quick .maintenance-icon--quick {
+  grid-row: 1 / span 2;
   width: 30px;
   height: 30px;
-  margin-right: 7px;
-  vertical-align: middle;
+}
+
+.quick-name,
+.quick-every {
+  grid-column: 2;
 }
 
 .quick .maintenance-icon--quick svg {
@@ -80,6 +88,8 @@
   width: 38px;
   height: 38px;
   transform: translateY(-50%);
+  color: var(--cat, var(--ink));
+  background: color-mix(in srgb, var(--cat, #8b867c) 13%, #fffaf0);
 }
 
 .schedule-row {
@@ -260,16 +270,44 @@
     height: 46px;
   }
 
+  /* 兩欄小卡：圖示和標籤同一行，數字與說明在下面佔滿寬度。 */
   .dash-card {
-    grid-template-columns: 52px minmax(0, 1fr);
-    column-gap: 14px;
-    min-height: 118px;
-    padding: 15px 16px;
+    grid-template-columns: 26px minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    column-gap: 8px;
+    align-content: start;
+    min-height: 0;
+    padding: 12px;
   }
 
   .dash-card > .maintenance-icon--dash {
-    width: 46px;
-    height: 46px;
+    grid-row: 1;
+    width: 26px;
+    height: 26px;
+  }
+
+  .dash-card > .maintenance-icon--dash svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .dash-card > span:not(.maintenance-icon) {
+    align-self: center;
+  }
+
+  .dash-card > strong,
+  .dash-card > small {
+    grid-column: 1 / -1;
+  }
+
+  .dash-grid .dash-card > strong {
+    margin: 6px 0 4px;
+    font-size: 22px;
+    overflow-wrap: anywhere;
+  }
+
+  .dash-card > small {
+    font-size: 12.5px;
   }
 
   .major-service-note {

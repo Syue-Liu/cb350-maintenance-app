@@ -87,6 +87,7 @@ function init() {
   });
 
   els.bikeForm.addEventListener("submit", updateSettings);
+  els.currentMileage.addEventListener("input", fitOdometer);
   els.addForm.addEventListener("submit", handleManualAdd);
   els.cancelEditButton.addEventListener("click", cancelEdit);
   els.addItem.addEventListener("change", () => syncActionOptions(els.addItem.value));
@@ -255,7 +256,7 @@ function resetAddForm({ keepItem = false } = {}) {
   els.editRecordId.value = "";
   els.saveRecordButton.textContent = "加入紀錄";
   els.cancelEditButton.hidden = true;
-  els.addDate.value = state.settings.currentDate || toDateInput(new Date());
+  els.addDate.value = VehicleProfiles.today();
   els.addMileage.value = state.settings.currentMileage;
   els.addBrand.value = "";
   els.addCost.value = "";
@@ -331,7 +332,6 @@ function handleTextAdd(event) {
 
   const parsed = parseMaintenanceText(text, {
     items: MAINTENANCE_ITEMS,
-    fallbackDate: state.settings.currentDate,
     fallbackMileage: state.settings.currentMileage,
     uuid: newId,
   });
@@ -384,17 +384,18 @@ function fillSample() {
 /* ------------------------------------------------------------------ 畫面 */
 
 function render() {
-  renderDashboard();
-  renderStatusStrip();
-  renderReminders();
+  const reminders = getReminders();
+  fitOdometer();
+  renderDashboard(reminders);
+  renderStatusStrip(reminders);
+  renderReminders(reminders);
   renderVisits();
   renderSpending();
   renderSchedule();
 }
 
-function renderDashboard() {
+function renderDashboard(reminders = getReminders()) {
   const currentMileage = Number(state.settings.currentMileage) || 0;
-  const reminders = getReminders();
   const due = reminders.filter((item) => item.status === "due");
   const soon = reminders.filter((item) => item.status === "soon");
   const next = reminders.find((item) => ["due", "soon"].includes(item.status)) || (vehicleId === "gogoro" ? reminders.find(item => item.key === "ezzyService" && item.status !== "unknown") : reminders.find(item => item.status !== "unknown"));
@@ -412,7 +413,7 @@ function renderDashboard() {
       <button class="dash-card" type="button" data-dash-tab="reminders">
         <span>下次保養</span>
         <strong>${next ? escapeHtml(next.name) : "尚無"}</strong>
-        <small>${next ? stripTags(next.meta).split("，")[0] : "新增紀錄後開始追蹤"}</small>
+        <small>${next ? nextSummary(next) : "新增紀錄後開始追蹤"}</small>
       </button>
       <button class="dash-card" type="button" data-dash-tab="schedule">
         <span>${vehicleId === "gogoro" ? "距離定期保養" : "距離小保養"}</span>
@@ -431,8 +432,24 @@ function renderDashboard() {
   });
 }
 
-function renderStatusStrip() {
-  const reminders = getReminders();
+// 卡片只有一行：到期或快到期時講出真正的原因（超過里程或過了日期），而不是一律顯示下次里程。
+function nextSummary(item) {
+  const { kmLeft, daysLeft } = item;
+  if (kmLeft < 0) return `已超過 ${formatKm(-kmLeft)}`;
+  if (daysLeft < 0) return `已過期 ${-daysLeft} 天`;
+  if (kmLeft === 0) return "里程已到";
+  if (daysLeft === 0) return "今天到期";
+  if (item.status === "soon") return kmLeft <= SOON_KM ? `還有 ${formatKm(kmLeft)}` : `還有 ${daysLeft} 天`;
+  return stripTags(item.meta).split("，")[0];
+}
+
+// 數字輸入框不會隨內容縮放，km 會被擠到最右邊；依位數設定寬度，讓單位貼著數字。
+function fitOdometer() {
+  const digits = String(els.currentMileage.value || els.currentMileage.placeholder || "0").length;
+  els.currentMileage.style.setProperty("--odo-digits", Math.max(digits, 1));
+}
+
+function renderStatusStrip(reminders = getReminders()) {
   const due = reminders.filter((item) => item.status === "due").length;
   const soon = reminders.filter((item) => item.status === "soon").length;
   els.tabBadge.hidden = due === 0;
@@ -463,8 +480,7 @@ function renderStatusStrip() {
   els.statusStrip.innerHTML = parts.join("，");
 }
 
-function renderReminders() {
-  const reminders = getReminders();
+function renderReminders(reminders = getReminders()) {
   const showAll = Boolean(state.settings.showAllReminders);
   const visible = showAll ? reminders : reminders.filter((item) => ["due", "soon"].includes(item.status));
   els.toggleRemindersButton.textContent = showAll ? "只看要處理的" : "展開全部";
@@ -543,8 +559,7 @@ function renderVisits() {
           const detail = [record.action, record.brand].filter(Boolean).join("　");
           const note = visibleNote(record);
           return `
-            <div class="visit-item">
-              <span class="dot" style="background:${category ? category.color : "#999"}"></span>
+            <div class="visit-item"${category ? ` style="--cat:${category.color}"` : ""}>
               <span class="visit-name">${escapeHtml(record.item)}</span>
               <span class="visit-cost">${record.cost ? `NT$ ${number(record.cost)}` : ""}</span>
               <button class="visit-edit" type="button" data-edit="${record.id}" aria-label="編輯 ${escapeHtml(
@@ -599,7 +614,7 @@ function visibleNote(record) {
 function getFilteredRecords() {
   const query = String(els.historySearch.value || "").trim().toLowerCase();
   const filter = els.historyFilter.value || "all";
-  const now = parseLocalDate(state.settings.currentDate || toDateInput(new Date()));
+  const now = parseLocalDate(VehicleProfiles.today());
   const recentCutoff = new Date(now);
   recentCutoff.setMonth(recentCutoff.getMonth() - 12);
 
@@ -671,6 +686,9 @@ function renderSpending() {
   const mileages = state.records.map((record) => Number(record.mileage) || 0).filter(Boolean);
   const span = mileages.length ? Math.max(...mileages) - Math.min(...mileages) : 0;
   const visits = new Set(state.records.map((record) => `${record.date}|${record.mileage}`)).size;
+  const firstMonth = String(dates[0] || "").slice(0, 7);
+  const lastMonth = String(dates.at(-1) || "").slice(0, 7);
+  const period = !firstMonth ? "—" : firstMonth === lastMonth ? firstMonth : `${firstMonth} ～ ${lastMonth}`;
 
   els.spendSummary.innerHTML = `
     <div class="spend-total">
@@ -681,7 +699,7 @@ function renderSpending() {
       <div><dt>進廠次數</dt><dd>${visits} 次</dd></div>
       <div><dt>平均每次</dt><dd>NT$ ${number(Math.round(total / visits))}</dd></div>
       <div><dt>每 1,000 km</dt><dd>${span ? `NT$ ${number(Math.round((total / span) * 1000))}` : "—"}</dd></div>
-      <div><dt>紀錄起訖</dt><dd>${dates[0] || "—"} 起</dd></div>
+      <div><dt>紀錄起訖</dt><dd>${period}</dd></div>
     </dl>`;
 
   const byItem = new Map();
@@ -773,19 +791,19 @@ function renderSchedule() {
 function getReminders() {
   if (vehicleId === "gogoro") return VehicleProfiles.ezzyReminders(state).map(item => ({ ...item, meta: item.status === "unknown" ? "等待交車資料或首次保養紀錄" : buildReminderMeta({ ...item, nextDate: item.nextDate ? parseLocalDate(item.nextDate) : null }) })).sort((a,b)=>statusRank(a.status)-statusRank(b.status) || b.progress-a.progress);
   const currentMileage = Number(state.settings.currentMileage) || 0;
-  const currentDate = parseLocalDate(state.settings.currentDate || toDateInput(new Date()));
+  // 日期週期跟著真實的今天走；檢查日期只代表里程是哪天讀的，沒按「更新」也不能讓倒數停住。
+  const currentDate = parseLocalDate(VehicleProfiles.today());
 
   return MAINTENANCE_ITEMS.map((item) => {
     const last = findLatestRecord(state.records, item);
     const lastMileage = Number(last?.mileage) || 0;
-    const lastDate = last?.date ? parseLocalDate(last.date) : null;
 
     const nextKm = item.kmInterval
       ? last && hasMileage(last.mileage)
         ? lastMileage + item.kmInterval
         : nextCycle(currentMileage, item.kmInterval)
       : 0;
-    const nextDate = item.monthInterval && lastDate ? addMonths(lastDate, item.monthInterval) : null;
+    const nextDate = item.monthInterval && last?.date ? parseLocalDate(VehicleProfiles.addMonths(last.date, item.monthInterval)) : null;
 
     const kmLeft = nextKm ? nextKm - currentMileage : Infinity;
     const daysLeft = nextDate ? Math.ceil((nextDate - currentDate) / 86400000) : Infinity;
@@ -843,7 +861,7 @@ function completeReminder(key) {
   switchTab("compose");
   els.addItem.value = item.key;
   syncActionOptions(item.key);
-  els.addDate.value = state.settings.currentDate || toDateInput(new Date());
+  els.addDate.value = VehicleProfiles.today();
   els.addMileage.value = mileage;
   els.addBrand.value = item.defaultSpec || "";
   els.addCost.value = "";
@@ -978,12 +996,6 @@ function statusRank(status) {
 
 function statusText(status) {
   return { due: "已到期", soon: "快到期", ok: "正常", unknown: "待設定" }[status] || status;
-}
-
-function addMonths(date, months) {
-  const next = new Date(date);
-  next.setMonth(next.getMonth() + months);
-  return next;
 }
 
 function parseLocalDate(value) {

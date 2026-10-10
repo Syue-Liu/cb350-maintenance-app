@@ -43,8 +43,6 @@
   }
 
   .odo-readout input {
-    width: min(560px, calc(100% - 56px));
-    flex: 0 1 560px;
     font-size: clamp(56px, 6vw, 76px);
   }
 
